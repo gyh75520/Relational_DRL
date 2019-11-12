@@ -1,0 +1,2 @@
+from gym_boxworld.envs.Box_world_env import BoxWoldEnv
+from gym_boxworld.envs.Box_world_rand_env import BoxWoldRandEnv
