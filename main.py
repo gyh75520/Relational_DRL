@@ -22,14 +22,14 @@ def make_env(env_id, rank, log_dir, useMonitor=True, seed=0):
 
 
 def set_model(model_name, policy_name, env):
-    policy = {'CnnPolicy': CnnPolicy, 'Relational_Policy': RelationalPolicy}
+    policy = {'CnnPolicy': CnnPolicy, 'RelationalPolicy': RelationalPolicy}
     base_mode = {'A2C': A2C}
     model = base_mode[model_name](policy[policy_name], env, verbose=1)
     return model
 
 
 def run(config):
-    log_dir = '{}/{}_{}/log_0/'.format(config.log_dir, config.env_name, config.model_name)
+    log_dir = '{}/{}_{}_{}/log_0/'.format(config.log_dir, config.env_name, config.model_name, config.policy_name)
     # if log_dir exists,auto add new dir by order
     while os.path.exists(log_dir):
         lastdir_name = log_dir.split('/')[-2]
@@ -47,7 +47,7 @@ def run(config):
           .format(config.model_name, config.policy_name, config.num_cpu, config.total_timesteps))
 
     # model.learn(total_timesteps=int(1e7), callback=callback)
-    model.learn(total_timesteps=config.total_timesteps)
+    model.learn(total_timesteps=int(config.total_timesteps))
     if config.save:
         model.save(log_dir + config.model_name + '_' + config.env_name)
 
@@ -55,13 +55,13 @@ def run(config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("env_name", choices=['BoxRandWorld', 'BoxWorld'], help="Name of environment")
-    parser.add_argument("policy_name", choices=['Relational_Policy', 'CnnPolicy'], help="Name of policy")
+    parser.add_argument("policy_name", choices=['RelationalPolicy', 'CnnPolicy'], help="Name of policy")
     parser.add_argument("-model_name", choices=['A2C'], default='A2C', help="Name of model")
 
     parser.add_argument("-num_cpu", default=4, type=int)
-    parser.add_argument("-total_timesteps", default=int(2e6), type=int)
+    parser.add_argument("-total_timesteps", default=2e6, type=float)
     parser.add_argument("-log_dir", default='exp_result')
-    parser.add_argument("-save", action='store_false')
+    parser.add_argument("-save", action='store_true')
 
     config = parser.parse_args()
     # print(config)

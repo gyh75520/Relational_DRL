@@ -5,12 +5,11 @@ from utils import get_coor, MHDPA, residual_block, nature_cnn
 
 
 class RelationalPolicy(ActorCriticPolicy):
-    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch=32, reuse=False, net_arch=None,
-                 act_fun=tf.tanh, cnn_extractor=nature_cnn, feature_extraction="cnn", **kwargs):
+    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, net_arch=None,
+                 act_fun=tf.nn.relu, cnn_extractor=nature_cnn, feature_extraction="cnn", **kwargs):
         super(RelationalPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse,
                                                scale=(feature_extraction == "cnn"))
         self._kwargs_check(feature_extraction, kwargs)
-
         with tf.variable_scope("model", reuse=reuse):
             print('self.processed_obs', self.processed_obs)
             # [B,H,W,Deepth]
@@ -32,9 +31,11 @@ class RelationalPolicy(ActorCriticPolicy):
             residual_maxpooling_output = tf.reduce_max(residual_output, axis=[1])
             print('residual_maxpooling_output', residual_maxpooling_output)
 
-            if net_arch is None:
-                layers = [64, 64]
-            net_arch = [dict(vf=layers, pi=layers)]
+            # if net_arch is None:
+            #     layers = [64, 64]
+            # net_arch = [dict(vf=layers, pi=layers)]
+            net_arch = [128, dict(vf=[256], pi=[16])]
+
             # pi_latent = vf_latent = cnn_extractor(residual_maxpooling_output, **kwargs)
             pi_latent, vf_latent = mlp_extractor(tf.layers.flatten(residual_maxpooling_output), net_arch, act_fun)
 
