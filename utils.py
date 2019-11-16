@@ -13,14 +13,14 @@ def nature_cnn(scaled_images, **kwargs):
     """
     activ = tf.nn.relu
     print('scaled_images', scaled_images)
-    layer_1 = activ(conv(scaled_images, 'c1', n_filters=32, filter_size=8, stride=4, init_scale=np.sqrt(2), **kwargs))
-    layer_2 = activ(conv(layer_1, 'c2', n_filters=64, filter_size=4, stride=2, init_scale=np.sqrt(2), **kwargs))
-    layer_3 = activ(conv(layer_2, 'c3', n_filters=64, filter_size=3, stride=1, init_scale=np.sqrt(2), **kwargs))
-    print('layer_3', layer_3)
+    layer_1 = activ(conv(scaled_images, 'c1', n_filters=12, filter_size=2, stride=1, init_scale=np.sqrt(2), **kwargs))
+    layer_2 = activ(conv(layer_1, 'c2', n_filters=24, filter_size=2, stride=1, init_scale=np.sqrt(2), **kwargs))
+    # layer_3 = activ(conv(layer_2, 'c3', n_filters=64, filter_size=3, stride=1, init_scale=np.sqrt(2), **kwargs))
+    print('layer_2', layer_2)
     # layer_3 = conv_to_fc(layer_3)
 
     # return activ(linear(layer_3, 'fc1', n_hidden=512, init_scale=np.sqrt(2)))
-    return layer_3
+    return layer_2
 
 
 def layerNorm(input_tensor, scope, eps=1e-5):

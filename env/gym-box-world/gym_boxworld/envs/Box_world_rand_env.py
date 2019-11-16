@@ -68,7 +68,7 @@ class BoxWoldRandEnv(gym.Env):
 
         # set observation space
         self.box_size = 14
-        self.obs_shape = [self.box_size * 10, self.box_size * 10, 3]
+        self.obs_shape = [self.box_size, self.box_size, 3]
         self.observation_space = spaces.Box(low=0, high=255, shape=self.obs_shape, dtype=np.uint8)
 
         # initialize system
