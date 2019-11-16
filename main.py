@@ -58,6 +58,7 @@ if __name__ == '__main__':
     parser.add_argument("policy_name", choices=['RelationalPolicy', 'CnnPolicy'], help="Name of policy")
     parser.add_argument("-model_name", choices=['A2C'], default='A2C', help="Name of model")
 
+    parser.add_argument("-cuda_device", default='1')
     parser.add_argument("-num_cpu", default=4, type=int)
     parser.add_argument("-total_timesteps", default=2e6, type=float)
     parser.add_argument("-log_dir", default='exp_result')
@@ -65,5 +66,6 @@ if __name__ == '__main__':
 
     config = parser.parse_args()
     # print(config)
+    os.environ['CUDA_VISIBLE_DEVICES'] = config.cuda_device
     run(config)
     print('Over!')
