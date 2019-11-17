@@ -1,12 +1,12 @@
 from stable_baselines.common.policies import ActorCriticPolicy, mlp_extractor
 from stable_baselines.a2c.utils import linear
 import tensorflow as tf
-from utils import get_coor, MHDPA, residual_block, nature_cnn
+from utils import get_coor, MHDPA, residual_block, rrl_cnn
 
 
 class RelationalPolicy(ActorCriticPolicy):
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, net_arch=None,
-                 act_fun=tf.nn.relu, cnn_extractor=nature_cnn, feature_extraction="cnn", **kwargs):
+                 act_fun=tf.nn.relu, cnn_extractor=rrl_cnn, feature_extraction="cnn", **kwargs):
         super(RelationalPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse,
                                                scale=(feature_extraction == "cnn"))
         self._kwargs_check(feature_extraction, kwargs)

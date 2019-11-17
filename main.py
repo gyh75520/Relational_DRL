@@ -10,9 +10,9 @@ from stable_baselines.common import set_global_seeds
 from stable_baselines.bench import Monitor
 
 
-def make_env(env_id, rank, log_dir, useMonitor=True, seed=0):
+def make_env(env_id, env_level, rank, log_dir, useMonitor=True, seed=0):
     def _init():
-        env = gym.make(env_id)
+        env = gym.make(env_id, level=env_level)
         if useMonitor:
             env = Monitor(env, log_dir + str(rank), allow_early_resets=True)
         return env
@@ -29,7 +29,7 @@ def set_model(model_name, policy_name, env):
 
 
 def run(config):
-    log_dir = '{}/{}_{}_{}/log_0/'.format(config.log_dir, config.env_name, config.model_name, config.policy_name)
+    log_dir = '{}/{}{}_{}_{}/log_0/'.format(config.log_dir, config.env_name, config.env_level, config.model_name, config.policy_name)
     # if log_dir exists,auto add new dir by order
     while os.path.exists(log_dir):
         lastdir_name = log_dir.split('/')[-2]
@@ -41,7 +41,7 @@ def run(config):
     print(("--------------------------Create dir:{} Successful!--------------------------\n").format(log_dir))
 
     env_id = config.env_name + 'NoFrameskip-v4'
-    env = SubprocVecEnv([make_env(env_id, i, log_dir) for i in range(config.num_cpu)])
+    env = SubprocVecEnv([make_env(env_id, config.env_level, i, log_dir) for i in range(config.num_cpu)])
     model = set_model(config.model_name, config.policy_name, env)
     print(("--------Algorithm:{} with {} num_cpu:{} total_timesteps:{} Start to train!--------\n")
           .format(config.model_name, config.policy_name, config.num_cpu, config.total_timesteps))
@@ -55,6 +55,8 @@ def run(config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("env_name", choices=['BoxRandWorld', 'BoxWorld'], help="Name of environment")
+    parser.add_argument("-env_level", choices=['easy', 'medium', 'hard'], default='easy', help="level of environment")
+
     parser.add_argument("policy_name", choices=['RelationalPolicy', 'CnnPolicy'], help="Name of policy")
     parser.add_argument("-model_name", choices=['A2C'], default='A2C', help="Name of model")
 

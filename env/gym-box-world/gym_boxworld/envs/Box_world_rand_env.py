@@ -42,13 +42,13 @@ CorrectBox_COLORS = {3: [255., 255., 255.],
                      4: [0., 255., 0.], 5: [255.0, 0., 0.],
                      6: [255., 0., 255.], 7: [255., 255., 0.]}
 
-DistractorBox_COLORS = {8: [0., 255., 255.], 9: [255.0, 127.5, 127.5],
-                        10: [127.5, 0., 255.], 11: [255., 127.5, 0.]}
-
 # DistractorBox_COLORS = {8: [0., 255., 255.], 9: [255.0, 127.5, 127.5],
-#                         10: [127.5, 0., 255.], 11: [255., 127.5, 0.],
-#                         12: [127.5, 127.5, 255.], 13: [0., 127.5, 127.5],
-#                         14: [127.5, 127.5, 0.], 15: [255., 0., 127.5], }
+#                         10: [127.5, 0., 255.], 11: [255., 127.5, 0.]}
+
+DistractorBox_COLORS = {8: [0., 255., 255.], 9: [255.0, 127.5, 127.5],
+                        10: [127.5, 0., 255.], 11: [255., 127.5, 0.],
+                        12: [127.5, 127.5, 255.], 13: [0., 127.5, 127.5],
+                        14: [127.5, 127.5, 0.], 15: [255., 0., 127.5], }
 
 COLORS = dict(list(BGAndAG_COLORS.items()) + list(CorrectBox_COLORS.items()) + list(DistractorBox_COLORS.items()))
 
@@ -56,7 +56,8 @@ COLORS = dict(list(BGAndAG_COLORS.items()) + list(CorrectBox_COLORS.items()) + l
 class BoxWoldRandEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, level):
+        self.level = level
         self.seed()
         # self._action_set = [0, 2, 3, 4, 5]
         # self.action_space = spaces.Discrete(len(self._action_set))
@@ -108,7 +109,7 @@ class BoxWoldRandEnv(gym.Env):
             if self.init_world_map[First_CBOX_x][First_CBOX_y] == 1:
                 self.init_world_map[First_CBOX_x][First_CBOX_y] = 6
                 break
-        BOX_LIST = [(7, 6), (4, 7), (5, 4), (3, 5), (9, 5), (10, 5), (8, 7)]
+        BOX_LIST = [(7, 6), (8, 7), (4, 7), (5, 4), (3, 5), (9, 5), (10, 5)]
         # self.DistractorEndBox_lists = [9, 8]
         # BOX_LIST = [(7, 6), (4, 7), (5, 4), (3, 5), (9, 5), (8, 7), (10, 8), (11, 10), (12, 9), (13, 12)]
         self.DistractorEndBox_lists = [13, 11]
@@ -271,7 +272,7 @@ class BoxWoldRandEnv(gym.Env):
 
 
 if __name__ == '__main__':
-    env = BoxWoldRandEnv()
+    env = BoxWoldRandEnv(level='easy')
     # ob = env.observation
     # ob2 = np.mean(ob, axis=2)
 

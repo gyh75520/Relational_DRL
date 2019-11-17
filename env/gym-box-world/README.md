@@ -10,6 +10,8 @@ Keys are represented by a single colored pixel. The agent can pick up a loose ke
 To collect the content of a box the agent must first collect the key that opens the box (the onethat matches the lock’s color) and walk over the lock, which makes the lock disappear. At this pointthe content of the box becomes accessible and can be picked up by the agent. Most boxes containkeys that, if made accessible, can be used to open other boxes. One of the boxes contains a gem,represented by a single white pixel. The goal of the agent is to collect the gem by unlocking thebox that contains it and picking it up by walking over it. Keys that an agent has in possession aredepicted in the input observation as a pixel in the top-left corner.
 
 To see more in [Relational Deep Reinforcement Learning](https://arxiv.org/abs/1806.01830)
+
+![image.png](http://ww1.sinaimg.cn/large/74c11ddely1g905iyrrusj20nu0ixwfh.jpg)
 ## Action mapping
 - ``` UP``` - 0
 - ``` DOWN``` - 1
