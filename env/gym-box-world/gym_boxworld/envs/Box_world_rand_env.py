@@ -42,15 +42,20 @@ CorrectBox_COLORS = {3: [255., 255., 255.],
                      4: [0., 255., 0.], 5: [255.0, 0., 0.],
                      6: [255., 0., 255.], 7: [255., 255., 0.]}
 
-# DistractorBox_COLORS = {8: [0., 255., 255.], 9: [255.0, 127.5, 127.5],
-#                         10: [127.5, 0., 255.], 11: [255., 127.5, 0.]}
-
 DistractorBox_COLORS = {8: [0., 255., 255.], 9: [255.0, 127.5, 127.5],
                         10: [127.5, 0., 255.], 11: [255., 127.5, 0.],
                         12: [127.5, 127.5, 255.], 13: [0., 127.5, 127.5],
                         14: [127.5, 127.5, 0.], 15: [255., 0., 127.5], }
 
 COLORS = dict(list(BGAndAG_COLORS.items()) + list(CorrectBox_COLORS.items()) + list(DistractorBox_COLORS.items()))
+
+# branch_length = 1
+EASY_BOX_LIST = [(7, 6), (4, 7), (5, 4), (3, 5), (8, 7), (9, 5), (10, 5)]
+# branch_length = 2
+MEDIUM_BOX_LIST = [(7, 6), (4, 7), (5, 4), (3, 5), (8, 7), (11, 8), (9, 4), (12, 9), (10, 5), (13, 10)]
+# branch_length = 3
+HARD_BOX_LIST = [(7, 6), (4, 7), (5, 4), (3, 5), (8, 7), (11, 8), (9, 4), (12, 9), (14, 12), (10, 5), (13, 10), (15, 13)]
+BOX_DICT = {'easy': EASY_BOX_LIST, 'medium': MEDIUM_BOX_LIST, 'hard': HARD_BOX_LIST}
 
 
 class BoxWoldRandEnv(gym.Env):
@@ -109,9 +114,9 @@ class BoxWoldRandEnv(gym.Env):
             if self.init_world_map[First_CBOX_x][First_CBOX_y] == 1:
                 self.init_world_map[First_CBOX_x][First_CBOX_y] = 6
                 break
-        BOX_LIST = [(7, 6), (8, 7), (4, 7), (5, 4), (3, 5), (9, 5), (10, 5)]
-        # self.DistractorEndBox_lists = [9, 8]
-        # BOX_LIST = [(7, 6), (4, 7), (5, 4), (3, 5), (9, 5), (8, 7), (10, 8), (11, 10), (12, 9), (13, 12)]
+
+        assert(self.level in BOX_DICT.keys()), 'BoxWoldRandEnv only support {} levels'.format(list(BOX_DICT.keys()))
+        BOX_LIST = BOX_DICT[self.level]
         self.DistractorEndBox_lists = [13, 11]
         for BOX in BOX_LIST:
             self.set_box(BOX)
@@ -272,12 +277,15 @@ class BoxWoldRandEnv(gym.Env):
 
 
 if __name__ == '__main__':
-    env = BoxWoldRandEnv(level='easy')
+    env = BoxWoldRandEnv(level='medium')
     # ob = env.observation
     # ob2 = np.mean(ob, axis=2)
 
     while True:
-        observation, reward, done, info = env.step(input("Action 0~4 input:"))
+        action = -1
+        while action not in list(range(4)):
+            action = int(input("Action 0~3 input:"))
+        observation, reward, done, info = env.step(action)
         print(env.agent_current_state)
         print(env.get_current_agent_position())
         # observation, reward, done, info = env.step(env.action_space.sample())
