@@ -51,11 +51,15 @@ COLORS = dict(list(BGAndAG_COLORS.items()) + list(CorrectBox_COLORS.items()) + l
 
 # branch_length = 1
 EASY_BOX_LIST = [(7, 6), (4, 7), (5, 4), (3, 5), (8, 7), (9, 5), (10, 5)]
+EASY_END_LIST = [8, 9, 10]
 # branch_length = 2
 MEDIUM_BOX_LIST = [(7, 6), (4, 7), (5, 4), (3, 5), (8, 7), (11, 8), (9, 4), (12, 9), (10, 5), (13, 10)]
+MEDIUM_END_LIST = [11, 12, 13]
 # branch_length = 3
 HARD_BOX_LIST = [(7, 6), (4, 7), (5, 4), (3, 5), (8, 7), (11, 8), (9, 4), (12, 9), (14, 12), (10, 5), (13, 10), (15, 13)]
+HARD_END_LIST = [11, 14, 15]
 BOX_DICT = {'easy': EASY_BOX_LIST, 'medium': MEDIUM_BOX_LIST, 'hard': HARD_BOX_LIST}
+END_DICT = {'easy': EASY_END_LIST, 'medium': MEDIUM_END_LIST, 'hard': HARD_END_LIST}
 
 
 class BoxWoldRandEnv(gym.Env):
@@ -116,9 +120,8 @@ class BoxWoldRandEnv(gym.Env):
                 break
 
         assert(self.level in BOX_DICT.keys()), 'BoxWoldRandEnv only support {} levels'.format(list(BOX_DICT.keys()))
-        BOX_LIST = BOX_DICT[self.level]
-        self.DistractorEndBox_lists = [13, 11]
-        for BOX in BOX_LIST:
+
+        for BOX in BOX_DICT[self.level]:
             self.set_box(BOX)
 
         self.current_world_map = copy.deepcopy(self.init_world_map)
@@ -205,7 +208,7 @@ class BoxWoldRandEnv(gym.Env):
                     return (self.observation, reward, done, info)
                 else:
                     reward = -1
-                    if nxt_left_color in self.DistractorEndBox_lists:
+                    if nxt_left_color in END_DICT[self.level]:
                         done = True
                     else:
                         done = False
