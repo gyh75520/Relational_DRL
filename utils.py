@@ -103,6 +103,7 @@ def MHDPA(input_tensor, scope, num_heads):
         total_size = qkv_size * num_heads
 
         # Denote N = last_num_height * last_num_width
+        N = last_num_height * last_num_width
         # [B*N,Deepth]
         extracted_features_reshape = tf.reshape(input_tensor, [-1, last_num_features])
         # [B*N,F]
@@ -119,9 +120,10 @@ def MHDPA(input_tensor, scope, num_heads):
         print("qkv_transpose", qkv_transpose)
         q, k, v = tf.split(qkv_transpose, [key_size, key_size, value_size], -1)
 
-        q *= qkv_size ** -0.5
+        # q *= qkv_size ** -0.5
         # [B,H,N,N]
         dot_product = tf.matmul(q, k, transpose_b=True)
+        dot_product = dot_product * (N**-0.5)
         weights = tf.nn.softmax(dot_product)
         # [B,H,N,V]
         output = tf.matmul(weights, v)
