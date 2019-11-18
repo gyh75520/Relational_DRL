@@ -97,8 +97,8 @@ def MHDPA(input_tensor, scope, num_heads):
         last_num_width = input_tensor.get_shape()[2].value
         last_num_features = input_tensor.get_shape()[3].value
 
-        key_size = value_size = last_num_features
-        qkv_size = 2 * key_size + value_size
+        query_size = key_size = value_size = last_num_features
+        qkv_size = query_size + key_size + value_size
         # total_size Denoted as F, num_heads Denoted as H
         total_size = qkv_size * num_heads
 
