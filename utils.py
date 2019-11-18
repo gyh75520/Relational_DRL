@@ -5,7 +5,7 @@ from stable_baselines.a2c.utils import conv, linear
 
 def boxworld_cnn(scaled_images, **kwargs):
     """
-    CNN from rrl paper.
+    CNN for boxworld input[140,140].
 
     :param scaled_images: (TensorFlow Tensor) Image input placeholder
     :param kwargs: (dict) Extra keywords parameters for the convolutional layers of the CNN

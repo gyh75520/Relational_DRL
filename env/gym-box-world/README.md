@@ -13,9 +13,9 @@ To see more in [Relational Deep Reinforcement Learning](https://arxiv.org/abs/18
 
 ![image.png](http://ww1.sinaimg.cn/large/74c11ddely1g905iyrrusj20nu0ixwfh.jpg)
 ## Action mapping
-- ``` UP``` - 0
-- ``` DOWN``` - 1
-- ``` LEFT``` - 2
+- ``` UP```    - 0
+- ``` DOWN```  - 1
+- ``` LEFT```  - 2
 - ``` RIGHT``` - 3
 
 ## Observations
@@ -29,3 +29,7 @@ To see more in [Relational Deep Reinforcement Learning](https://arxiv.org/abs/18
     - Fixed the location of keys and boxes
 - BoxWoldRandEnv
     - Randomly generate the location of keys and boxes
+    - 3 levels: each have 3 branchs
+        - ```easy```: the lengh of branch is 1
+        - ```medium```: the lengh of branch is 2
+        - ```hard```: the lengh of branch is 3
