@@ -67,7 +67,7 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
     recurrent = True
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm=256, reuse=False, layers=None,
-                 net_arch=None, act_fun=tf.tanh, cnn_extractor=boxworld_cnn, layer_norm=False, feature_extraction="cnn",
+                 net_arch=None, cnn_extractor=boxworld_cnn, layer_norm=False, feature_extraction="cnn",
                  **kwargs):
         # state_shape = [n_lstm * 2] dim because of the cell and hidden states of the LSTM
         super(RelationalLstmPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
