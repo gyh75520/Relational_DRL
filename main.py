@@ -4,7 +4,7 @@ import gym
 import gym_boxworld
 from stable_baselines import A2C
 from stable_baselines.common.policies import CnnPolicy
-from relational_policies import RelationalPolicy  # custom Policy
+from relational_policies import RelationalPolicy, RelationalLstmPolicy  # custom Policy
 from stable_baselines.common.vec_env import SubprocVecEnv
 from stable_baselines.common import set_global_seeds
 from stable_baselines.bench import Monitor
@@ -22,7 +22,7 @@ def make_env(env_id, env_level, rank, log_dir, useMonitor=True, seed=0):
 
 
 def set_model(model_name, policy_name, env):
-    policy = {'CnnPolicy': CnnPolicy, 'RelationalPolicy': RelationalPolicy}
+    policy = {'CnnPolicy': CnnPolicy, 'RelationalPolicy': RelationalPolicy, 'RelationalLstmPolicy': RelationalLstmPolicy}
     base_mode = {'A2C': A2C}
     model = base_mode[model_name](policy[policy_name], env, verbose=1)
     return model
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument("env_name", choices=['BoxRandWorld', 'BoxWorld'], help="Name of environment")
     parser.add_argument("-env_level", choices=['easy', 'medium', 'hard'], default='easy', help="level of environment")
 
-    parser.add_argument("policy_name", choices=['RelationalPolicy', 'CnnPolicy'], help="Name of policy")
+    parser.add_argument("policy_name", choices=['RelationalPolicy', 'CnnPolicy', 'RelationalLstmPolicy'], help="Name of policy")
     parser.add_argument("-model_name", choices=['A2C'], default='A2C', help="Name of model")
 
     parser.add_argument("-cuda_device", default='1')
