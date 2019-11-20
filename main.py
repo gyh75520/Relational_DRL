@@ -8,11 +8,14 @@ from relational_policies import RelationalPolicy, RelationalLstmPolicy  # custom
 from stable_baselines.common.vec_env import SubprocVecEnv
 from stable_baselines.common import set_global_seeds
 from stable_baselines.bench import Monitor
+from stable_baselines.common.atari_wrappers import FrameStack
 
 
-def make_env(env_id, env_level, rank, log_dir, useMonitor=True, seed=0):
+def make_env(env_id, env_level, rank, log_dir, frame_stack=False, useMonitor=True, seed=0):
     def _init():
         env = gym.make(env_id, level=env_level)
+        if frame_stack:
+            env = FrameStack(env, 4)
         if useMonitor:
             env = Monitor(env, log_dir + str(rank), allow_early_resets=True)
         return env
@@ -41,7 +44,7 @@ def run(config):
     print(("--------------------------Create dir:{} Successful!--------------------------\n").format(log_dir))
 
     env_id = config.env_name + 'NoFrameskip-v4'
-    env = SubprocVecEnv([make_env(env_id, config.env_level, i, log_dir) for i in range(config.num_cpu)])
+    env = SubprocVecEnv([make_env(env_id, config.env_level, i, log_dir, frame_stack=config.frame_stack) for i in range(config.num_cpu)])
     model = set_model(config.model_name, config.policy_name, env)
     print(("--------Algorithm:{} with {} num_cpu:{} total_timesteps:{} Start to train!--------\n")
           .format(config.model_name, config.policy_name, config.num_cpu, config.total_timesteps))
@@ -60,6 +63,7 @@ if __name__ == '__main__':
     parser.add_argument("policy_name", choices=['RelationalPolicy', 'CnnPolicy', 'RelationalLstmPolicy'], help="Name of policy")
     parser.add_argument("-model_name", choices=['A2C'], default='A2C', help="Name of model")
 
+    parser.add_argument("-frame_stack", action='store_true')
     parser.add_argument("-cuda_device", default='1')
     parser.add_argument("-num_cpu", default=4, type=int)
     parser.add_argument("-total_timesteps", default=2e6, type=float)
