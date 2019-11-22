@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import gym
 import gym_boxworld
@@ -24,14 +25,7 @@ def make_env(env_id, env_level, rank, log_dir, frame_stack=False, useMonitor=Tru
     return _init
 
 
-def set_model(model_name, policy_name, env):
-    policy = {'CnnPolicy': CnnPolicy, 'RelationalPolicy': RelationalPolicy, 'RelationalLstmPolicy': RelationalLstmPolicy}
-    base_mode = {'A2C': A2C}
-    model = base_mode[model_name](policy[policy_name], env, verbose=1)
-    return model
-
-
-def run(config):
+def set_logdir(config):
     log_dir = '{}/{}{}_{}_{}/log_0/'.format(config.log_dir, config.env_name, config.env_level, config.model_name, config.policy_name)
     # if log_dir exists,auto add new dir by order
     while os.path.exists(log_dir):
@@ -40,19 +34,33 @@ def run(config):
         log_dir = log_dir.replace('_{}'.format(order), '_{}'.format(order + 1))
     os.makedirs(log_dir)
     with open(log_dir + 'config.txt', 'wt') as f:
-        f.write(str(config))
+        json.dump(config.__dict__, f, indent=2)
     print(("--------------------------Create dir:{} Successful!--------------------------\n").format(log_dir))
+    return log_dir
 
+
+def set_env(config, log_dir):
     env_id = config.env_name + 'NoFrameskip-v4'
     env = SubprocVecEnv([make_env(env_id, config.env_level, i, log_dir, frame_stack=config.frame_stack) for i in range(config.num_cpu)])
-    model = set_model(config.model_name, config.policy_name, env)
+    return env
+
+
+def set_model(config, env):
+    policy = {'CnnPolicy': CnnPolicy, 'RelationalPolicy': RelationalPolicy, 'RelationalLstmPolicy': RelationalLstmPolicy}
+    base_mode = {'A2C': A2C}
+    model = base_mode[config.model_name](policy[config.policy_name], env, verbose=1)
     print(("--------Algorithm:{} with {} num_cpu:{} total_timesteps:{} Start to train!--------\n")
           .format(config.model_name, config.policy_name, config.num_cpu, config.total_timesteps))
+    return model
 
-    # model.learn(total_timesteps=int(1e7), callback=callback)
+
+def run(config):
+    log_dir = set_logdir(config)
+    env = set_env(config, log_dir)
+    model = set_model(config, env)
     model.learn(total_timesteps=int(config.total_timesteps))
     if config.save:
-        model.save(log_dir + config.model_name + '_' + config.env_name)
+        model.save(log_dir + 'model.pkl')
 
 
 if __name__ == '__main__':
