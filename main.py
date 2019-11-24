@@ -12,6 +12,18 @@ from stable_baselines.bench import Monitor
 from stable_baselines.common.atari_wrappers import FrameStack
 
 
+def saveInLearn(log_dir):
+    # A unit of time saved
+    unit_time = int(1e7)
+
+    def callback(_locals, _globals):
+        num_timesteps = _locals['self'].num_timesteps
+        if num_timesteps >= 5 * unit_time and num_timesteps % unit_time == 0:
+            _locals['self'].save(log_dir + 'model_{}.pkl'.format(num_timesteps))
+        return True
+    return callback
+
+
 def make_env(env_id, env_level, rank, log_dir, frame_stack=False, useMonitor=True, seed=0):
     def _init():
         env = gym.make(env_id, level=env_level)
@@ -58,9 +70,9 @@ def run(config):
     log_dir = set_logdir(config)
     env = set_env(config, log_dir)
     model = set_model(config, env)
-    model.learn(total_timesteps=int(config.total_timesteps))
-    if config.save:
-        model.save(log_dir + 'model.pkl')
+    model.learn(total_timesteps=int(config.total_timesteps), callback=saveInLearn(log_dir) if config.save else None)
+    # if config.save:
+    #     model.save(log_dir + 'model.pkl')
 
 
 if __name__ == '__main__':
