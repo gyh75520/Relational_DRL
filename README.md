@@ -36,3 +36,12 @@ python main.py BoxRandWorld -env_level easy RelationalLstmPolicy
 ```
 ## Experiment result
 ![image.png](http://ww1.sinaimg.cn/large/74c11ddely1g94sxzhiu2j218g0ukwhe.jpg)
+
+###BoxRandWorld, level = easy, head = 2
+The following is the relation(attention) weight diagram of the agent
+> 0:Dark
+> 1:White
+
+The greater the weight, the more the color tends to be white
+![](gif/BoxRandWorldEasy2.gif)
+![](gif/BoxRandWorldEasy3.gif)
