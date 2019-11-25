@@ -39,7 +39,7 @@ python main.py BoxRandWorld -env_level easy RelationalLstmPolicy
 #### Training Curve
 
 <div align="center">
-<img src="http://ww1.sinaimg.cn/large/74c11ddely1g94sxzhiu2j218g0ukwhe.jpg" width=600 style="margin-bottom: 28px;"/>
+<img src="http://ww1.sinaimg.cn/large/74c11ddely1g94sxzhiu2j218g0ukwhe.jpg" width=600 />
 </div>
 
 #### Relation diagram
