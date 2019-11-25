@@ -1,4 +1,7 @@
-# Relational Deep Reinforcement Learning
+# Implementation of Relational Deep Reinforcement Learning
+This Repository is implementation of [Relational Deep Reinforcement Learning](https://arxiv.org/abs/1806.01830) to BoxWorld Environment.
+
+The Reinforcement Learning Algorithm is A2C, but it's very easy to change the base algorithm.
 ## Requirements
 - Python: 3.6.1
 - Tensorflow: 1.11.0
