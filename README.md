@@ -42,7 +42,7 @@ python main.py BoxRandWorld -env_level easy RelationalLstmPolicy
 <img src="http://ww1.sinaimg.cn/large/74c11ddely1g94sxzhiu2j218g0ukwhe.jpg" width=600 style="margin-bottom: 28px;"/>
 </div>
 
-### BoxRandWorld, level = easy, head = 2
+#### Relation diagram
 The following is the relation(attention) weight diagram of the agent
 > 0:Dark
 > 1:White
