@@ -20,7 +20,8 @@ To see more in [Relational Deep Reinforcement Learning](https://arxiv.org/abs/18
 
 ## Observations
 - Screen:
-    - ```frame```- 14x14 vectors of RGB pixels representing renderd screen.( The screen includes game boundaries)
+    - ```frame```- 140x140 vectors of RGB pixels representing renderd screen.( The screen includes game boundaries)
+        - 10x10 represent 1 gird
 
 
 
