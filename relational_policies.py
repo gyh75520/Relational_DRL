@@ -1,7 +1,7 @@
 from stable_baselines.common.policies import ActorCriticPolicy, RecurrentActorCriticPolicy, mlp_extractor
 from stable_baselines.a2c.utils import linear
 import tensorflow as tf
-from utils import get_coor, MHDPA, residual_block, rrl_cnn, boxworld_cnn
+from utils import get_coor, MHDPA, residual_block, rrl_cnn, boxworld_cnn, simple_cnn, reduce_border
 from stable_baselines.a2c.utils import batch_to_seq, seq_to_batch, lstm
 
 
@@ -61,8 +61,9 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
 
         with tf.variable_scope("model", reuse=reuse):
             print('self.processed_obs', self.processed_obs)
+            small_obs = reduce_border(self.processed_obs)
             # [B,H,W,Deepth]
-            extracted_features = cnn_extractor(self.processed_obs, **kwargs)
+            extracted_features = cnn_extractor(small_obs, **kwargs)
             print('extracted_features', extracted_features)
             relation_block_output = self.relation_block(extracted_features)
             # original code
@@ -103,7 +104,7 @@ def relation_block(self, extracted_features):
     entities = tf.concat([extracted_features, coor], axis=3)
     print('entities:', entities)
     # [B,H*W,num_heads,Deepth=D+2]
-    MHDPA_output, weights = MHDPA(entities, "extracted_features", num_heads=2)
+    MHDPA_output, weights = MHDPA(entities, "MHDPA", num_heads=2)
     print('MHDPA_output', MHDPA_output)
     self.weights = weights
     # [B,H*W,num_heads,Deepth]
