@@ -119,7 +119,7 @@ def MHDPA(input_tensor, scope, num_heads):
         total_size = qkv_size * num_heads
 
         # Denote N = last_num_height * last_num_width
-        # N = last_num_height * last_num_width
+        N = last_num_height * last_num_width
         # [B*N,Deepth]
         extracted_features_reshape = tf.reshape(input_tensor, [-1, last_num_features])
         # [B*N,F]
@@ -127,9 +127,55 @@ def MHDPA(input_tensor, scope, num_heads):
         # [B*N,F]
         qkv = layerNorm(qkv, "qkv_layerNorm")
         # [B,N,F]
-        qkv = tf.reshape(qkv, [-1, last_num_height * last_num_width, total_size])
+        qkv = tf.reshape(qkv, [-1, N, total_size])
         # [B,N,H,F/H]
-        qkv_reshape = tf.reshape(qkv, [-1, last_num_height * last_num_width, num_heads, qkv_size])
+        qkv_reshape = tf.reshape(qkv, [-1, N, num_heads, qkv_size])
+        print("qkv_reshape", qkv_reshape)
+        # [B,N,H,F/H] -> [B,H,N,F/H]
+        qkv_transpose = tf.transpose(qkv_reshape, [0, 2, 1, 3])
+        print("qkv_transpose", qkv_transpose)
+        q, k, v = tf.split(qkv_transpose, [key_size, key_size, value_size], -1)
+
+        # q *= qkv_size ** -0.5
+        # [B,H,N,N]
+        dot_product = tf.matmul(q, k, transpose_b=True)
+        dot_product = dot_product * (query_size**-0.5)
+        weights = tf.nn.softmax(dot_product)
+        # [B,H,N,V]
+        output = tf.matmul(weights, v)
+        # [B,H,N,V] -> [B,N,H,V]
+        output_transpose = tf.transpose(output, [0, 2, 1, 3])
+
+        return output_transpose, weights
+
+
+def MHDPAv2(input_tensor, scope, num_heads):
+    """
+    same as MHDPA, the difference is input tensor:[B,N,D]
+    :param input_tensor: (TensorFlow Tensor) The input tensor from NN [B,N,D]
+    :param scope: (str) The TensorFlow variable scope
+    :param num_heads: (float) The number of attention heads to use
+    :return: (TensorFlow Tensor) [B,Height*W,num_heads,D]
+    """
+    with tf.variable_scope(scope):
+        N = input_tensor.get_shape()[1].value
+        last_num_features = input_tensor.get_shape()[2].value
+
+        query_size = key_size = value_size = last_num_features
+        qkv_size = query_size + key_size + value_size
+        # total_size Denoted as F, num_heads Denoted as H
+        total_size = qkv_size * num_heads
+
+        # [B*N,Deepth]
+        extracted_features_reshape = tf.reshape(input_tensor, [-1, last_num_features])
+        # [B*N,F]
+        qkv = linear(extracted_features_reshape, "QKV", total_size)
+        # [B*N,F]
+        qkv = layerNorm(qkv, "qkv_layerNorm")
+        # [B,N,F]
+        qkv = tf.reshape(qkv, [-1, N, total_size])
+        # [B,N,H,F/H]
+        qkv_reshape = tf.reshape(qkv, [-1, N, num_heads, qkv_size])
         print("qkv_reshape", qkv_reshape)
         # [B,N,H,F/H] -> [B,H,N,F/H]
         qkv_transpose = tf.transpose(qkv_reshape, [0, 2, 1, 3])
@@ -173,17 +219,49 @@ def residual_block(x, y):
     return residual_output
 
 
-def reduce_border(input_tensor):
+def residual_blockv2(x, y):
+    """
+    Z = W*y + x
+    :param x: (TensorFlow Tensor) The input tensor from NN [B,N,D]
+    :param y: (TensorFlow Tensor) The input tensor from MHDPA [B,Height*W,num_heads,D]
+    :return: (TensorFlow Tensor) [B,Height*W,num_heads,D]
+    """
+    last_num_features = x.get_shape()[2].value
+    # W*y
+    y_Matmul_W = conv(y, 'y_Matmul_W', n_filters=last_num_features, filter_size=1, stride=1, init_scale=np.sqrt(2))
+    print('y_Matmul_W', y_Matmul_W)
+    x_edims = tf.expand_dims(x, axis=2)
+    num_heads = y.get_shape()[2]
+    # [B,N,1,D] --> [B,N,H,D]
+    x_edims = tf.tile(x_edims, [1,  1, num_heads, 1])
+    # W*y + x
+    residual_output = tf.add(y_Matmul_W, x_edims)
+    return residual_output
+
+
+def reduce_border_extractor(input_tensor):
     """
     reduce boxworld border, and concat indcator
     """
+    batch = tf.shape(input_tensor)[0]
     height = input_tensor.get_shape()[1].value
     width = input_tensor.get_shape()[2].value
+
     gs = height // 14
     # get indicator
-    indicator = input_tensor[:, 0:1, 0:1, :]
-
-    indicator = tf.tile(indicator, [1, height - 2 * gs, width - 2 * gs, 1])
-    small_obs = tf.concat([input_tensor[:, gs:-gs, gs:-gs, :], indicator], axis=3)
+    small_obs = input_tensor[:, gs:-gs, gs:-gs, :]
+    indicator = input_tensor[:, 0, 0, :]
+    # indicator = input_tensor[:, 0:1, 0:1, :]
+    # indicator = tf.tile(indicator, [1, height - 2 * gs, width - 2 * gs, 1])
+    # small_obs = tf.concat([small_obs, indicator], axis=3)
     print('small_obs', small_obs)
-    return small_obs
+    extracted_small_obs = simple_cnn(small_obs)
+    channels = extracted_small_obs.get_shape()[3].value
+    extracted_indicator = linear(indicator, "indicator", channels)
+    obs_entities = tf.reshape(extracted_small_obs, [batch, -1, channels])
+    # print('obs_entities:', obs_entities)
+    indicator_entity = tf.expand_dims(extracted_indicator, axis=1)
+    # print('indicator_entity:', indicator_entity)
+    entities = tf.concat([obs_entities, indicator_entity], axis=1)
+    print('entities:', entities)
+    return entities

@@ -1,7 +1,7 @@
 from stable_baselines.common.policies import ActorCriticPolicy, RecurrentActorCriticPolicy, mlp_extractor
 from stable_baselines.a2c.utils import linear
 import tensorflow as tf
-from utils import get_coor, MHDPA, residual_block, rrl_cnn, boxworld_cnn, simple_cnn, reduce_border
+from utils import get_coor, MHDPA, residual_block, rrl_cnn, boxworld_cnn, simple_cnn, reduce_border_extractor, MHDPAv2, residual_blockv2
 from stable_baselines.a2c.utils import batch_to_seq, seq_to_batch, lstm
 
 
@@ -50,7 +50,7 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
     recurrent = True
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm=256, reuse=False, layers=None,
-                 net_arch=None, cnn_extractor=boxworld_cnn, layer_norm=False, feature_extraction="cnn",
+                 net_arch=None, cnn_extractor=simple_cnn, layer_norm=False, feature_extraction="cnn",
                  **kwargs):
         # state_shape = [n_lstm * 2] dim because of the cell and hidden states of the LSTM
         super(RelationalLstmPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
@@ -61,11 +61,12 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
 
         with tf.variable_scope("model", reuse=reuse):
             print('self.processed_obs', self.processed_obs)
-            small_obs = reduce_border(self.processed_obs)
             # [B,H,W,Deepth]
-            extracted_features = cnn_extractor(small_obs, **kwargs)
-            print('extracted_features', extracted_features)
-            relation_block_output = self.relation_block(extracted_features)
+            # extracted_features = cnn_extractor(self.processed_obs, **kwargs)
+            # relation_block_output = self.relation_block(extracted_features)
+            # test reduce_relation_block
+            relation_block_output = self.reduce_relation_block(self.processed_obs)
+
             # original code
             input_sequence = batch_to_seq(relation_block_output, self.n_env, n_steps)
             masks = batch_to_seq(self.dones_ph, self.n_env, n_steps)
@@ -117,4 +118,25 @@ def relation_block(self, extracted_features):
     return residual_maxpooling_output
 
 
+def reduce_relation_block(self, processed_obs):
+    coor = get_coor(processed_obs)
+    # [B,Height,W,D+2]
+    processed_obs = tf.concat([processed_obs, coor], axis=3)
+    # [B,N,W,D+2 N=Height*w+1
+    entities = reduce_border_extractor(processed_obs)
+    # [B,N,num_heads,Deepth=D+2]
+    MHDPA_output, weights = MHDPAv2(entities, "MHDPA", num_heads=2)
+    print('MHDPA_output', MHDPA_output)
+    self.weights = weights
+    # [B,N,num_heads,Deepth]
+    residual_output = residual_blockv2(entities, MHDPA_output)
+    print('residual_output', residual_output)
+
+    # max_pooling
+    residual_maxpooling_output = tf.reduce_max(residual_output, axis=[1])
+    print('residual_maxpooling_output', residual_maxpooling_output)
+    return residual_maxpooling_output
+
+
 ActorCriticPolicy.relation_block = relation_block
+ActorCriticPolicy.reduce_relation_block = reduce_relation_block
