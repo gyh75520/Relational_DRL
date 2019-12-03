@@ -3,6 +3,22 @@ import tensorflow as tf
 from stable_baselines.a2c.utils import conv, linear
 
 
+def concise_cnn(scaled_images, **kwargs):
+    """
+    concise CNN, input = [14,14,C].
+
+    :param scaled_images: (TensorFlow Tensor) Image input placeholder
+    :param kwargs: (dict) Extra keywords parameters for the convolutional layers of the CNN
+    :return: (TensorFlow Tensor) The CNN output layer
+    """
+    activ = tf.nn.relu
+    print('scaled_images', scaled_images)
+    layer_1 = activ(conv(scaled_images, 'c1', n_filters=32, filter_size=3, stride=1, init_scale=np.sqrt(2), pad='SAME', **kwargs))
+    layer_2 = activ(conv(layer_1, 'c2', n_filters=64, filter_size=1, stride=1, init_scale=np.sqrt(2), **kwargs))
+    print('layer_2', layer_2)
+    return layer_2
+
+
 def boxworld_cnn(scaled_images, **kwargs):
     """
     CNN for boxworld input(scaled_images): [140,140] .
@@ -171,19 +187,3 @@ def residual_block(x, y):
     # W*y + x
     residual_output = tf.add(y_Matmul_W, x_edims)
     return residual_output
-
-
-def reduce_border(input_tensor):
-    """
-    reduce boxworld border, and concat indcator
-    """
-    height = input_tensor.get_shape()[1].value
-    width = input_tensor.get_shape()[2].value
-    gs = height // 14
-    # get indicator
-    indicator = input_tensor[:, 0:1, 0:1, :]
-
-    indicator = tf.tile(indicator, [1, height - 2 * gs, width - 2 * gs, 1])
-    small_obs = tf.concat([input_tensor[:, gs:-gs, gs:-gs, :], indicator], axis=3)
-    print('small_obs', small_obs)
-    return small_obs

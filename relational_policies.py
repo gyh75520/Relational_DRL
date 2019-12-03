@@ -1,7 +1,7 @@
 from stable_baselines.common.policies import ActorCriticPolicy, RecurrentActorCriticPolicy, mlp_extractor
 from stable_baselines.a2c.utils import linear
 import tensorflow as tf
-from utils import get_coor, MHDPA, residual_block, rrl_cnn, boxworld_cnn, simple_cnn, reduce_border
+from utils import get_coor, MHDPA, residual_block, rrl_cnn, boxworld_cnn, simple_cnn, concise_cnn
 from stable_baselines.a2c.utils import batch_to_seq, seq_to_batch, lstm
 
 
@@ -50,7 +50,7 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
     recurrent = True
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm=256, reuse=False, layers=None,
-                 net_arch=None, cnn_extractor=boxworld_cnn, layer_norm=False, feature_extraction="cnn",
+                 net_arch=None, cnn_extractor=concise_cnn, layer_norm=False, feature_extraction="cnn",
                  **kwargs):
         # state_shape = [n_lstm * 2] dim because of the cell and hidden states of the LSTM
         super(RelationalLstmPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
@@ -61,9 +61,8 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
 
         with tf.variable_scope("model", reuse=reuse):
             print('self.processed_obs', self.processed_obs)
-            small_obs = reduce_border(self.processed_obs)
             # [B,H,W,Deepth]
-            extracted_features = cnn_extractor(small_obs, **kwargs)
+            extracted_features = cnn_extractor(self.processed_obs, **kwargs)
             print('extracted_features', extracted_features)
             relation_block_output = self.relation_block(extracted_features)
             # original code
