@@ -79,7 +79,7 @@ class BoxWoldRandEnv(gym.Env):
         # set observation space
         self.box_size = 14
         # scale
-        gs = 4
+        gs = 1
         self.obs_shape = [self.box_size * gs, self.box_size * gs, 3]
         self.observation_space = spaces.Box(low=0, high=255, shape=self.obs_shape, dtype=np.uint8)
 

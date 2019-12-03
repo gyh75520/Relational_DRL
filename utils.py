@@ -37,6 +37,22 @@ def simple_cnn(scaled_images, **kwargs):
     return layer_2
 
 
+def concise_cnn(scaled_images, **kwargs):
+    """
+    concise CNN, input = [14,14,C].
+
+    :param scaled_images: (TensorFlow Tensor) Image input placeholder
+    :param kwargs: (dict) Extra keywords parameters for the convolutional layers of the CNN
+    :return: (TensorFlow Tensor) The CNN output layer
+    """
+    activ = tf.nn.relu
+    print('scaled_images', scaled_images)
+    layer_1 = activ(conv(scaled_images, 'c1', n_filters=32, filter_size=3, stride=1, init_scale=np.sqrt(2), pad='SAME', **kwargs))
+    layer_2 = activ(conv(layer_1, 'c2', n_filters=64, filter_size=1, stride=1, init_scale=np.sqrt(2), **kwargs))
+    print('layer_2', layer_2)
+    return layer_2
+
+
 def rrl_cnn(scaled_images, **kwargs):
     """
     CNN from rrl paper.
@@ -255,7 +271,7 @@ def reduce_border_extractor(input_tensor):
     # indicator = tf.tile(indicator, [1, height - 2 * gs, width - 2 * gs, 1])
     # small_obs = tf.concat([small_obs, indicator], axis=3)
     print('small_obs', small_obs)
-    extracted_small_obs = simple_cnn(small_obs)
+    extracted_small_obs = concise_cnn(small_obs)
     channels = extracted_small_obs.get_shape()[3].value
     extracted_indicator = linear(indicator, "indicator", channels)
     obs_entities = tf.reshape(extracted_small_obs, [batch, -1, channels])
