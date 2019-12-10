@@ -46,7 +46,7 @@ python main.py BoxRandWorld -env_level easy RelationalLstmPolicy
 </div> -->
 
 <div align="center">
-<img src="http://ww1.sinaimg.cn/large/74c11ddely1g9rm3th3b5j20av07n0t0.jpg" width=600 />
+<img src="http://ww1.sinaimg.cn/large/74c11ddely1g9rm3th3b5j20av07n0t0.jpg" width=400 />
 </div>
 
 
