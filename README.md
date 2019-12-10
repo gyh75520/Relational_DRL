@@ -41,9 +41,14 @@ python main.py BoxRandWorld -env_level easy RelationalLstmPolicy
 ### BoxRandWorld, level = easy, head = 2
 #### Training Curve
 
-<div align="center">
+<!-- <div align="center">
 <img src="http://ww1.sinaimg.cn/large/74c11ddely1g94sxzhiu2j218g0ukwhe.jpg" width=600 />
+</div> -->
+
+<div align="center">
+<img src="http://ww1.sinaimg.cn/large/74c11ddely1g9rm3th3b5j20av07n0t0.jpg" width=600 />
 </div>
+
 
 #### Relation diagram
 The following is the relation(attention) weight diagram of the agent
@@ -51,5 +56,7 @@ The following is the relation(attention) weight diagram of the agent
 > 1:White
 
 The greater the weight, the more the color tends to be white
-![](gif/BoxRandWorldEasy2.gif)
-![](gif/BoxRandWorldEasy3.gif)
+<!-- ![](gif/BoxRandWorldEasy2.gif)
+![](gif/BoxRandWorldEasy3.gif) -->
+
+![](gif/concise_cnn_not_reduceObs.gif)

@@ -18,7 +18,7 @@ def saveInLearn(log_dir):
 
     def callback(_locals, _globals):
         num_timesteps = _locals['self'].num_timesteps
-        if num_timesteps >= 5 * unit_time and num_timesteps % unit_time == 0:
+        if num_timesteps >= 10 * unit_time and num_timesteps % unit_time == 0:
             _locals['self'].save(log_dir + 'model_{}.pkl'.format(num_timesteps))
         return True
     return callback
