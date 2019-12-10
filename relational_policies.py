@@ -110,10 +110,15 @@ def relation_block(self, extracted_features):
     residual_output = residual_block(entities, MHDPA_output)
     print('residual_output', residual_output)
 
-    # max_pooling
-    residual_maxpooling_output = tf.reduce_max(residual_output, axis=[1])
-    print('residual_maxpooling_output', residual_maxpooling_output)
-    return residual_maxpooling_output
+    # # max_pooling
+    # residual_maxpooling_output = tf.reduce_max(residual_output, axis=[1])
+    # print('residual_maxpooling_output', residual_maxpooling_output)
+    # return residual_maxpooling_output
+
+    # average_pooling
+    residual_avepooling_output = tf.reduce_mean(residual_output, axis=[1])
+    print('residual_avepooling_output', residual_avepooling_output)
+    return residual_avepooling_output
 
 
 ActorCriticPolicy.relation_block = relation_block
