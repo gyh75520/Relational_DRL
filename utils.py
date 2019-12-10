@@ -5,7 +5,7 @@ from stable_baselines.a2c.utils import conv, linear
 
 def concise_cnn(scaled_images, **kwargs):
     """
-    concise CNN, input = [14,14,C].
+    concise CNN, output = input = [W,H,C].
 
     :param scaled_images: (TensorFlow Tensor) Image input placeholder
     :param kwargs: (dict) Extra keywords parameters for the convolutional layers of the CNN
