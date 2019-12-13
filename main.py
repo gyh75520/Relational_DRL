@@ -57,10 +57,14 @@ def set_env(config, log_dir):
     return env
 
 
-def set_model(config, env):
+def set_model(config, env, log_dir):
+    if config.timeline:
+        from timeline_util import _train_step
+        A2C.log_dir = log_dir
+        A2C._train_step = _train_step
     policy = {'CnnPolicy': CnnPolicy, 'RelationalPolicy': RelationalPolicy, 'RelationalLstmPolicy': RelationalLstmPolicy}
     base_mode = {'A2C': A2C}
-    model = base_mode[config.model_name](policy[config.policy_name], env, verbose=1)
+    model = base_mode[config.model_name](policy[config.policy_name], env, verbose=1, tensorboard_log=log_dir,  full_tensorboard_log=True if log_dir else False)
     print(("--------Algorithm:{} with {} num_cpu:{} total_timesteps:{} Start to train!--------\n")
           .format(config.model_name, config.policy_name, config.num_cpu, config.total_timesteps))
     return model
@@ -69,7 +73,7 @@ def set_model(config, env):
 def run(config):
     log_dir = set_logdir(config)
     env = set_env(config, log_dir)
-    model = set_model(config, env)
+    model = set_model(config, env, log_dir)
     model.learn(total_timesteps=int(config.total_timesteps), callback=saveInLearn(log_dir) if config.save else None)
     # if config.save:
     #     model.save(log_dir + 'model.pkl')
@@ -83,12 +87,13 @@ if __name__ == '__main__':
     parser.add_argument("policy_name", choices=['RelationalPolicy', 'CnnPolicy', 'RelationalLstmPolicy'], help="Name of policy")
     parser.add_argument("-model_name", choices=['A2C'], default='A2C', help="Name of model")
 
-    parser.add_argument("-frame_stack", action='store_true')
-    parser.add_argument("-cuda_device", default='1')
-    parser.add_argument("-num_cpu", default=4, type=int)
-    parser.add_argument("-total_timesteps", default=2e6, type=float)
-    parser.add_argument("-log_dir", default='exp_result')
-    parser.add_argument("-save", action='store_true')
+    parser.add_argument("-timeline", action='store_true', help='performance analysis,default=False')
+    parser.add_argument("-frame_stack", action='store_true', help='whether use frame_stack, default=False')
+    parser.add_argument("-cuda_device", default='1', help='which cuda device to run, default="1"')
+    parser.add_argument("-num_cpu", default=4, type=int, help='whether use frame_stack, default=False')
+    parser.add_argument("-total_timesteps", default=2e6, type=float, help='total train timesteps, default=2e6')
+    parser.add_argument("-log_dir", default='exp_result', help='log_dir path, default="exp_result"')
+    parser.add_argument("-save", action='store_true', help='whether save model to log_dir, default=False')
 
     config = parser.parse_args()
     # print(config)
