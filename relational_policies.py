@@ -112,7 +112,7 @@ def relation_block(self, extracted_features):
     residual_output = residual_block(entities, MHDPA_output)
     print('residual_output', residual_output)
 
-    # max_pooling
+    # max_pooling [B,H*W,num_heads,Deepth] --> [B,num_heads,Deepth]
     residual_maxpooling_output = tf.reduce_max(residual_output, axis=[1])
     print('residual_maxpooling_output', residual_maxpooling_output)
     return residual_maxpooling_output
@@ -122,7 +122,7 @@ def reduce_relation_block(self, processed_obs):
     coor = get_coor(processed_obs)
     # [B,Height,W,D+2]
     processed_obs = tf.concat([processed_obs, coor], axis=3)
-    # [B,N,W,D+2 N=Height*w+1
+    # [B,N,W,D+2] N=Height*w+1
     entities = reduce_border_extractor(processed_obs)
     # [B,N,num_heads,Deepth=D+2]
     MHDPA_output, weights = MHDPAv2(entities, "MHDPA", num_heads=2)

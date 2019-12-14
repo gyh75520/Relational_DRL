@@ -165,26 +165,26 @@ def MHDPA(input_tensor, scope, num_heads):
         return output_transpose, weights
 
 
-def MHDPAv2(input_tensor, scope, num_heads):
+def MHDPAv2(entities, scope, num_heads):
     """
     same as MHDPA, the difference is input tensor:[B,N,D]
-    :param input_tensor: (TensorFlow Tensor) The input tensor from NN [B,N,D]
+    :param entities: (TensorFlow Tensor) The input tensor from NN [B,N,D]
     :param scope: (str) The TensorFlow variable scope
     :param num_heads: (float) The number of attention heads to use
     :return: (TensorFlow Tensor) [B,Height*W,num_heads,D]
     """
     with tf.variable_scope(scope):
-        N = input_tensor.get_shape()[1].value
-        last_num_features = input_tensor.get_shape()[2].value
+        N = entities.get_shape()[1].value
+        entitiy_dimension = entities.get_shape()[2].value
 
-        query_size = key_size = value_size = last_num_features
+        query_size = key_size = value_size = entitiy_dimension
         qkv_size = query_size + key_size + value_size
         # total_size Denoted as F, num_heads Denoted as H
         total_size = qkv_size * num_heads
 
         # [B*N,Deepth]
-        extracted_features_reshape = tf.reshape(input_tensor, [-1, last_num_features])
-        # [B*N,F]
+        extracted_features_reshape = tf.reshape(entities, [-1, entitiy_dimension])
+        # [B*N,F] F = 3*D*n_Head
         qkv = linear(extracted_features_reshape, "QKV", total_size)
         # [B*N,F]
         qkv = layerNorm(qkv, "qkv_layerNorm")
@@ -196,6 +196,7 @@ def MHDPAv2(input_tensor, scope, num_heads):
         # [B,N,H,F/H] -> [B,H,N,F/H]
         qkv_transpose = tf.transpose(qkv_reshape, [0, 2, 1, 3])
         print("qkv_transpose", qkv_transpose)
+        # q = k = v = [B,H,N,D]
         q, k, v = tf.split(qkv_transpose, [key_size, key_size, value_size], -1)
 
         # q *= qkv_size ** -0.5
