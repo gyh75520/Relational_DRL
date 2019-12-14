@@ -1,24 +1,34 @@
 from stable_baselines.common.policies import ActorCriticPolicy, RecurrentActorCriticPolicy, mlp_extractor
 from stable_baselines.a2c.utils import linear
 import tensorflow as tf
+<<<<<<< HEAD
 from utils import get_coor, MHDPA, residual_block, rrl_cnn, boxworld_cnn, simple_cnn, concise_cnn
+=======
+from utils import MHDPA, residual_block, build_entities, reduce_border_extractor, get_coor
+>>>>>>> reduce_relational_block
 from stable_baselines.a2c.utils import batch_to_seq, seq_to_batch, lstm
 
 
 class RelationalPolicy(ActorCriticPolicy):
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, net_arch=None,
+<<<<<<< HEAD
                  act_fun=tf.tanh, cnn_extractor=concise_cnn, feature_extraction="cnn", **kwargs):
+=======
+                 act_fun=tf.tanh, feature_extraction="cnn", **kwargs):
+>>>>>>> reduce_relational_block
         super(RelationalPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse,
                                                scale=(feature_extraction == "cnn"))
         self._kwargs_check(feature_extraction, kwargs)
         with tf.variable_scope("model", reuse=reuse):
             print('self.processed_obs', self.processed_obs)
-            # [B,H,W,Deepth]
-            extracted_features = cnn_extractor(self.processed_obs, **kwargs)
-            print('extracted_features', extracted_features)
-            relation_block_output = self.relation_block(extracted_features)
-            # original code
+            relation_block_output = self.relation_block(self.processed_obs)
             pi_latent = vf_latent = tf.layers.flatten(relation_block_output)
+
+            # original code
+<<<<<<< HEAD
+            pi_latent = vf_latent = tf.layers.flatten(relation_block_output)
+=======
+>>>>>>> reduce_relational_block
             # net_arch = [128, dict(vf=[256], pi=[16])]
             # pi_latent, vf_latent = mlp_extractor(tf.layers.flatten(relation_block_output), net_arch, act_fun)
             self._value_fn = linear(vf_latent, 'vf', 1)
@@ -50,7 +60,11 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
     recurrent = True
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm=256, reuse=False, layers=None,
+<<<<<<< HEAD
                  net_arch=None, cnn_extractor=concise_cnn, layer_norm=False, feature_extraction="cnn",
+=======
+                 net_arch=None, layer_norm=False, feature_extraction="cnn",
+>>>>>>> reduce_relational_block
                  **kwargs):
         # state_shape = [n_lstm * 2] dim because of the cell and hidden states of the LSTM
         super(RelationalLstmPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
@@ -61,10 +75,15 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
 
         with tf.variable_scope("model", reuse=reuse):
             print('self.processed_obs', self.processed_obs)
+<<<<<<< HEAD
             # [B,H,W,Deepth]
             extracted_features = cnn_extractor(self.processed_obs, **kwargs)
             print('extracted_features', extracted_features)
             relation_block_output = self.relation_block(extracted_features)
+=======
+            relation_block_output = self.relation_block(self.processed_obs)
+
+>>>>>>> reduce_relational_block
             # original code
             input_sequence = batch_to_seq(relation_block_output, self.n_env, n_steps)
             print('input_sequence', input_sequence)
@@ -98,20 +117,18 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
         return self.sess.run(self.weights, {self.obs_ph: obs, self.states_ph: state, self.dones_ph: mask})
 
 
-def relation_block(self, extracted_features):
-    coor = get_coor(extracted_features)
-    # [B,Height,W,D+2]
-    entities = tf.concat([extracted_features, coor], axis=3)
+def relation_block(self, processed_obs):
+    entities = build_entities(processed_obs, self.reduce_obs)
     print('entities:', entities)
-    # [B,H*W,num_heads,Deepth=D+2]
+    # [B,N,num_heads,Deepth=D+2]
     MHDPA_output, weights = MHDPA(entities, "MHDPA", num_heads=2)
     print('MHDPA_output', MHDPA_output)
     self.weights = weights
-    # [B,H*W,num_heads,Deepth]
+    # [B,N,num_heads,Deepth]
     residual_output = residual_block(entities, MHDPA_output)
     print('residual_output', residual_output)
 
-    # max_pooling
+    # max_pooling [B,N,num_heads,Deepth] --> [B,num_heads,Deepth]
     residual_maxpooling_output = tf.reduce_max(residual_output, axis=[1])
     print('residual_maxpooling_output', residual_maxpooling_output)
     return residual_maxpooling_output
