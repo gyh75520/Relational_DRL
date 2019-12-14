@@ -7,7 +7,7 @@ from stable_baselines.a2c.utils import batch_to_seq, seq_to_batch, lstm
 
 class RelationalPolicy(ActorCriticPolicy):
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, net_arch=None,
-                 act_fun=tf.tanh, cnn_extractor=boxworld_cnn, feature_extraction="cnn", **kwargs):
+                 act_fun=tf.tanh, cnn_extractor=concise_cnn, feature_extraction="cnn", **kwargs):
         super(RelationalPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse,
                                                scale=(feature_extraction == "cnn"))
         self._kwargs_check(feature_extraction, kwargs)
@@ -18,9 +18,9 @@ class RelationalPolicy(ActorCriticPolicy):
             print('extracted_features', extracted_features)
             relation_block_output = self.relation_block(extracted_features)
             # original code
-            net_arch = [128, dict(vf=[256], pi=[16])]
-            # pi_latent = vf_latent = cnn_extractor(residual_maxpooling_output, **kwargs)
-            pi_latent, vf_latent = mlp_extractor(tf.layers.flatten(relation_block_output), net_arch, act_fun)
+            pi_latent = vf_latent = tf.layers.flatten(relation_block_output)
+            # net_arch = [128, dict(vf=[256], pi=[16])]
+            # pi_latent, vf_latent = mlp_extractor(tf.layers.flatten(relation_block_output), net_arch, act_fun)
             self._value_fn = linear(vf_latent, 'vf', 1)
             self._proba_distribution, self._policy, self.q_value = \
                 self.pdtype.proba_distribution_from_latent(pi_latent, vf_latent, init_scale=0.01)
@@ -67,6 +67,7 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
             relation_block_output = self.relation_block(extracted_features)
             # original code
             input_sequence = batch_to_seq(relation_block_output, self.n_env, n_steps)
+            print('input_sequence', input_sequence)
             masks = batch_to_seq(self.dones_ph, self.n_env, n_steps)
             rnn_output, self.snew = lstm(input_sequence, masks, self.states_ph, 'lstm1', n_hidden=n_lstm,
                                          layer_norm=layer_norm)
@@ -110,15 +111,15 @@ def relation_block(self, extracted_features):
     residual_output = residual_block(entities, MHDPA_output)
     print('residual_output', residual_output)
 
-    # # max_pooling
-    # residual_maxpooling_output = tf.reduce_max(residual_output, axis=[1])
-    # print('residual_maxpooling_output', residual_maxpooling_output)
-    # return residual_maxpooling_output
+    # max_pooling
+    residual_maxpooling_output = tf.reduce_max(residual_output, axis=[1])
+    print('residual_maxpooling_output', residual_maxpooling_output)
+    return residual_maxpooling_output
 
-    # average_pooling
-    residual_avepooling_output = tf.reduce_mean(residual_output, axis=[1])
-    print('residual_avepooling_output', residual_avepooling_output)
-    return residual_avepooling_output
+    # # average_pooling
+    # residual_avepooling_output = tf.reduce_mean(residual_output, axis=[1])
+    # print('residual_avepooling_output', residual_avepooling_output)
+    # return residual_avepooling_output
 
 
 ActorCriticPolicy.relation_block = relation_block
