@@ -60,6 +60,8 @@ def set_env(config, log_dir):
 def set_model(config, env):
     policy = {'CnnPolicy': CnnPolicy, 'RelationalPolicy': RelationalPolicy, 'RelationalLstmPolicy': RelationalLstmPolicy}
     base_mode = {'A2C': A2C}
+    # whether reduce oberservation
+    policy[config.policy_name].reduce_obs = config.reduce_obs
     model = base_mode[config.model_name](policy[config.policy_name], env, verbose=1)
     print(("--------Algorithm:{} with {} num_cpu:{} total_timesteps:{} Start to train!--------\n")
           .format(config.model_name, config.policy_name, config.num_cpu, config.total_timesteps))
@@ -82,6 +84,7 @@ if __name__ == '__main__':
 
     parser.add_argument("policy_name", choices=['RelationalPolicy', 'CnnPolicy', 'RelationalLstmPolicy'], help="Name of policy")
     parser.add_argument("-model_name", choices=['A2C'], default='A2C', help="Name of model")
+    parser.add_argument("-reduce_obs", action='store_true')
 
     parser.add_argument("-frame_stack", action='store_true')
     parser.add_argument("-cuda_device", default='1')
