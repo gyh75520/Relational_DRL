@@ -64,13 +64,9 @@ def set_model(config, env, log_dir):
         A2C._train_step = _train_step
     policy = {'CnnPolicy': CnnPolicy, 'RelationalPolicy': RelationalPolicy, 'RelationalLstmPolicy': RelationalLstmPolicy}
     base_mode = {'A2C': A2C}
-<<<<<<< HEAD
-    model = base_mode[config.model_name](policy[config.policy_name], env, verbose=1, tensorboard_log=log_dir,  full_tensorboard_log=True if log_dir else False)
-=======
     # whether reduce oberservation
     policy[config.policy_name].reduce_obs = config.reduce_obs
     model = base_mode[config.model_name](policy[config.policy_name], env, verbose=1)
->>>>>>> reduce_relational_block
     print(("--------Algorithm:{} with {} num_cpu:{} total_timesteps:{} Start to train!--------\n")
           .format(config.model_name, config.policy_name, config.num_cpu, config.total_timesteps))
     return model

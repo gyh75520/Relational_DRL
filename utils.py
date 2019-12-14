@@ -185,8 +185,6 @@ def residual_block(x, y):
     # W*y + x
     residual_output = tf.add(y_Matmul_W, x_edims)
     return residual_output
-<<<<<<< HEAD
-=======
 
 
 def reduce_border_extractor(input_tensor):
@@ -238,4 +236,3 @@ def entities_flatten(input_tensor):
     """
     _, h, w, channels = input_tensor.shape.as_list()
     return tf.reshape(input_tensor, [-1, h * w, channels])
->>>>>>> reduce_relational_block
