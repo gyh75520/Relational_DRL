@@ -1,7 +1,7 @@
 from stable_baselines.common.policies import ActorCriticPolicy, RecurrentActorCriticPolicy
 from stable_baselines.a2c.utils import linear
 import tensorflow as tf
-from utils import MHDPA, residual_block, build_entities
+from utils import MHDPA, residual_block, build_entities, layerNorm
 from stable_baselines.a2c.utils import batch_to_seq, seq_to_batch, lstm
 
 
@@ -15,7 +15,6 @@ class RelationalPolicy(ActorCriticPolicy):
             print('self.processed_obs', self.processed_obs)
             relation_block_output = self.relation_block(self.processed_obs)
             pi_latent = vf_latent = tf.layers.flatten(relation_block_output)
-
             # original code
             self._value_fn = linear(vf_latent, 'vf', 1)
             self._proba_distribution, self._policy, self.q_value = \
@@ -39,7 +38,7 @@ class RelationalPolicy(ActorCriticPolicy):
         return self.sess.run(self.value_flat, {self.obs_ph: obs})
 
     def attention(self, obs, state=None, mask=None):
-        return self.sess.run(self.weights, {self.obs_ph: obs})
+        return self.sess.run(self.relations, {self.obs_ph: obs})
 
 
 class RelationalLstmPolicy(RecurrentActorCriticPolicy):
@@ -89,29 +88,31 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
         return self.sess.run(self.value_flat, {self.obs_ph: obs, self.states_ph: state, self.dones_ph: mask})
 
     def attention(self, obs, state=None, mask=None):
-        return self.sess.run(self.weights, {self.obs_ph: obs, self.states_ph: state, self.dones_ph: mask})
+        return self.sess.run(self.relations, {self.obs_ph: obs, self.states_ph: state, self.dones_ph: mask})
 
 
 def relation_block(self, processed_obs):
     entities = build_entities(processed_obs, self.reduce_obs)
     print('entities:', entities)
-    # [B,n_heads,N,,Deepth=D+2]
-    MHDPA_output, weights = MHDPA(entities, "MHDPA", n_heads=2)
+    # [B,n_heads,N,Deepth=D+2]
+    MHDPA_output, self.relations = MHDPA(entities, "MHDPA", n_heads=2)
     print('MHDPA_output', MHDPA_output)
-    self.weights = weights
     # [B,n_heads,N,Deepth]
     residual_output = residual_block(entities, MHDPA_output)
     print('residual_output', residual_output)
-
     # max_pooling [B,n_heads,N,Deepth] --> [B,n_heads,Deepth]
-    residual_maxpooling_output = tf.reduce_max(residual_output, axis=[2])
-    print('residual_maxpooling_output', residual_maxpooling_output)
-    return residual_maxpooling_output
+    maxpooling_output = tf.reduce_max(residual_output, axis=2)
+    print('maxpooling_output', maxpooling_output)
+    # [B,n_heads,Deepth]
+    output = tf.layers.flatten(maxpooling_output)
+    output = layerNorm(output, "relation_layerNorm")
+    print('relation_layerNorm', output)
+    return output
 
     # # average_pooling
-    # residual_avepooling_output = tf.reduce_mean(residual_output, axis=[2])
-    # print('residual_avepooling_output', residual_avepooling_output)
-    # return residual_avepooling_output
+    # maxpooling_output = tf.reduce_mean(residual_output, axis=2)
+    # print('maxpooling_output', maxpooling_output)
+    # return maxpooling_output
 
 
 ActorCriticPolicy.relation_block = relation_block

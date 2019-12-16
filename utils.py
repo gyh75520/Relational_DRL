@@ -91,7 +91,7 @@ def get_coor(input_tensor):
     """
     The output of cnn is tagged with two extra channels indicating the spatial position(x and y) of each cell
 
-    :param input_tensor: (TensorFlow Tensor) The input tensor from NN [B,Height,W,D]
+    :param input_tensor: (TensorFlow Tensor)  [B,Height,W,D]
     :return: (TensorFlow Tensor) [B,Height,W,2]
     """
     batch_size = tf.shape(input_tensor)[0]
@@ -115,14 +115,13 @@ def getQKV(entities, n_heads):
     :param entities: (TensorFlow Tensor) The input entities : [B,N,D]
     :param scope: (str) The TensorFlow variable scope
     :param n_heads: (float) The number of attention heads to use
-    :return: (TensorFlow Tensor) [B,N,n_heads,D]
+    :return: (TensorFlow Tensor) [B,n_heads,N,D]
     """
     N = entities.shape[1].value
     query_size = key_size = value_size = channels = entities.shape[2].value
     qkv_size = query_size + key_size + value_size
     # total_size Denoted as F, n_heads Denoted as H
     total_size = qkv_size * n_heads
-
     # [B*N,Deepth]
     entities = tf.reshape(entities, [-1, channels])
     # [B*N,F] F = 3*D*n_heads
@@ -131,18 +130,21 @@ def getQKV(entities, n_heads):
     qkv = layerNorm(qkv, "qkv_layerNorm")
     # # [B,N,F]
     # qkv = tf.reshape(qkv, [-1, N, total_size])
-    # [B,N,H,F/H]
+    # [B,N,n_heads,3*D]
     qkv = tf.reshape(qkv, [-1, N, n_heads, qkv_size])
-    # [B,N,H,F/H] -> [B,H,N,F/H]
+    # [B,N,n_heads,3*D] -> [B,n_heads,N,3*D]
     qkv = tf.transpose(qkv, [0, 2, 1, 3])
-    # q = k = v = [B,H,N,D]
+    # q = k = v = [B,n_heads,N,D]
     q, k, v = tf.split(qkv, [key_size, key_size, value_size], -1)
     return q, k, v
 
 
 def MHDPA(entities, scope, n_heads):
     """
-    Multi-Head DotProduct Attention
+    An implementation of the Multi-Head Dot-Product Attention architecture in "Relational Deep Reinforcement Learning"
+    https://arxiv.org/abs/1806.01830
+    ref to the RMC architecture on https://github.com/deepmind/sonnet/blob/master/sonnet/python/modules/relational_memory.py
+
     :param entities: (TensorFlow Tensor) The input tensor from NN [B,N,D]
     :param scope: (str) The TensorFlow variable scope
     :param n_heads: (float) The number of attention heads to use
@@ -155,13 +157,13 @@ def MHDPA(entities, scope, n_heads):
         # [B,n_heads,N,N]
         dot_product = tf.matmul(q, k, transpose_b=True)
         dot_product = dot_product * (query_size**-0.5)
-        weights = tf.nn.softmax(dot_product)
+        relations = tf.nn.softmax(dot_product)
         # [B,n_heads,N,D]
-        output = tf.matmul(weights, v)
-        # # [B,n_heads,N,D] -> [B,n_heads,H,D]
+        output = tf.matmul(relations, v)
+        # # [B,n_heads,N,D] -> [B,n_heads,N,D]
         # output = tf.transpose(output, [0, 2, 1, 3])
 
-        return output, weights
+        return output, relations
 
 
 def residual_block(x, y):
