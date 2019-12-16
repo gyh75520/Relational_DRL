@@ -1,7 +1,7 @@
-from stable_baselines.common.policies import ActorCriticPolicy, RecurrentActorCriticPolicy, mlp_extractor
+from stable_baselines.common.policies import ActorCriticPolicy, RecurrentActorCriticPolicy
 from stable_baselines.a2c.utils import linear
 import tensorflow as tf
-from utils import MHDPA, residual_block, build_entities, reduce_border_extractor, get_coor
+from utils import MHDPA, residual_block, build_entities
 from stable_baselines.a2c.utils import batch_to_seq, seq_to_batch, lstm
 
 
@@ -17,8 +17,6 @@ class RelationalPolicy(ActorCriticPolicy):
             pi_latent = vf_latent = tf.layers.flatten(relation_block_output)
 
             # original code
-            # net_arch = [128, dict(vf=[256], pi=[16])]
-            # pi_latent, vf_latent = mlp_extractor(tf.layers.flatten(relation_block_output), net_arch, act_fun)
             self._value_fn = linear(vf_latent, 'vf', 1)
             self._proba_distribution, self._policy, self.q_value = \
                 self.pdtype.proba_distribution_from_latent(pi_latent, vf_latent, init_scale=0.01)
