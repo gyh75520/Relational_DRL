@@ -110,45 +110,56 @@ def get_coor(input_tensor):
     return coor
 
 
-def MHDPA(entities, scope, num_heads):
+def getQKV(entities, n_heads):
     """
-    same as MHDPA, the difference is input tensor:[B,N,D]
+    :param entities: (TensorFlow Tensor) The input entities : [B,N,D]
+    :param scope: (str) The TensorFlow variable scope
+    :param n_heads: (float) The number of attention heads to use
+    :return: (TensorFlow Tensor) [B,N,n_heads,D]
+    """
+    N = entities.shape[1].value
+    query_size = key_size = value_size = channels = entities.shape[2].value
+    qkv_size = query_size + key_size + value_size
+    # total_size Denoted as F, n_heads Denoted as H
+    total_size = qkv_size * n_heads
+
+    # [B*N,Deepth]
+    entities = tf.reshape(entities, [-1, channels])
+    # [B*N,F] F = 3*D*n_heads
+    qkv = linear(entities, "QKV", total_size)
+    # [B*N,F]
+    qkv = layerNorm(qkv, "qkv_layerNorm")
+    # # [B,N,F]
+    # qkv = tf.reshape(qkv, [-1, N, total_size])
+    # [B,N,H,F/H]
+    qkv = tf.reshape(qkv, [-1, N, n_heads, qkv_size])
+    # [B,N,H,F/H] -> [B,H,N,F/H]
+    qkv = tf.transpose(qkv, [0, 2, 1, 3])
+    # q = k = v = [B,H,N,D]
+    q, k, v = tf.split(qkv, [key_size, key_size, value_size], -1)
+    return q, k, v
+
+
+def MHDPA(entities, scope, n_heads):
+    """
+    Multi-Head DotProduct Attention
     :param entities: (TensorFlow Tensor) The input tensor from NN [B,N,D]
     :param scope: (str) The TensorFlow variable scope
-    :param num_heads: (float) The number of attention heads to use
-    :return: (TensorFlow Tensor) [B,N,num_heads,D]
+    :param n_heads: (float) The number of attention heads to use
+    :return: (TensorFlow Tensor) [B,n_heads,N,D]
     """
     with tf.variable_scope(scope):
-        N = entities.shape[1].value
-        query_size = key_size = value_size = channels = entities.shape[2].value
-        qkv_size = query_size + key_size + value_size
-        # total_size Denoted as F, num_heads Denoted as H
-        total_size = qkv_size * num_heads
-
-        # [B*N,Deepth]
-        entities = tf.reshape(entities, [-1, channels])
-        # [B*N,F] F = 3*D*n_Head
-        qkv = linear(entities, "QKV", total_size)
-        # [B*N,F]
-        qkv = layerNorm(qkv, "qkv_layerNorm")
-        # # [B,N,F]
-        # qkv = tf.reshape(qkv, [-1, N, total_size])
-        # [B,N,H,F/H]
-        qkv = tf.reshape(qkv, [-1, N, num_heads, qkv_size])
-        # [B,N,H,F/H] -> [B,H,N,F/H]
-        qkv = tf.transpose(qkv, [0, 2, 1, 3])
-        # q = k = v = [B,H,N,D]
-        q, k, v = tf.split(qkv, [key_size, key_size, value_size], -1)
-
+        q, k, v = getQKV(entities, n_heads)
+        query_size = entities.shape[2].value
         # q *= qkv_size ** -0.5
-        # [B,H,N,N]
+        # [B,n_heads,N,N]
         dot_product = tf.matmul(q, k, transpose_b=True)
         dot_product = dot_product * (query_size**-0.5)
         weights = tf.nn.softmax(dot_product)
-        # [B,H,N,V]
+        # [B,n_heads,N,D]
         output = tf.matmul(weights, v)
-        # [B,H,N,V] -> [B,N,H,V]
-        output = tf.transpose(output, [0, 2, 1, 3])
+        # # [B,n_heads,N,D] -> [B,n_heads,H,D]
+        # output = tf.transpose(output, [0, 2, 1, 3])
 
         return output, weights
 
@@ -156,16 +167,16 @@ def MHDPA(entities, scope, num_heads):
 def residual_block(x, y):
     """
     Z = W*y + x
-    :param x: (TensorFlow Tensor) The input tensor from CNN [B,N,D] N = n_entities
-    :param y: (TensorFlow Tensor) The input tensor from MHDPA [B,N,num_heads,D]
-    :return: (TensorFlow Tensor) [B,N,num_heads,D]
+    :param x: (TensorFlow Tensor) entities [B,N,D] N = n_entities
+    :param y: (TensorFlow Tensor) new_entities from MHDPA [B,n_heads,N,D]
+    :return: (TensorFlow Tensor) [B,n_heads,N,D]
     """
     # W*y
     y_Matmul_W = conv(y, 'y_Matmul_W', n_filters=y.shape[3].value, filter_size=1, stride=1, init_scale=np.sqrt(2))
     # print('y_Matmul_W', y_Matmul_W)
-    x_edims = tf.expand_dims(x, axis=2)
-    # [B,N,1,D] --> [B,N,H,D]
-    x_edims = tf.tile(x_edims, [1,  1, y.shape[2].value, 1])
+    x_edims = tf.expand_dims(x, axis=1)
+    # [B,1,N,D] --> [B,n_heads,N,D]
+    x_edims = tf.tile(x_edims, [1,  y.shape[1].value, 1, 1])
     # W*y + x
     residual_output = tf.add(y_Matmul_W, x_edims)
     return residual_output
@@ -192,6 +203,7 @@ def reduce_border_extractor(input_tensor):
     indicator_entity = tf.expand_dims(indicator, axis=1)
     # [B,W*H+1,D]
     entities = tf.concat([inter_entities, indicator_entity], axis=1)
+
     return entities
 
 
@@ -209,6 +221,7 @@ def build_entities(processed_obs, reduce_obs=False):
         entities = tf.concat([extracted_features, coor], axis=3)
         # [B,N,D] N=Height*w
         entities = entities_flatten(entities)
+
     return entities
 
 

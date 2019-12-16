@@ -95,21 +95,21 @@ class RelationalLstmPolicy(RecurrentActorCriticPolicy):
 def relation_block(self, processed_obs):
     entities = build_entities(processed_obs, self.reduce_obs)
     print('entities:', entities)
-    # [B,N,num_heads,Deepth=D+2]
-    MHDPA_output, weights = MHDPA(entities, "MHDPA", num_heads=2)
+    # [B,n_heads,N,,Deepth=D+2]
+    MHDPA_output, weights = MHDPA(entities, "MHDPA", n_heads=2)
     print('MHDPA_output', MHDPA_output)
     self.weights = weights
-    # [B,N,num_heads,Deepth]
+    # [B,n_heads,N,Deepth]
     residual_output = residual_block(entities, MHDPA_output)
     print('residual_output', residual_output)
 
-    # max_pooling [B,N,num_heads,Deepth] --> [B,num_heads,Deepth]
-    residual_maxpooling_output = tf.reduce_max(residual_output, axis=[1])
+    # max_pooling [B,n_heads,N,Deepth] --> [B,n_heads,Deepth]
+    residual_maxpooling_output = tf.reduce_max(residual_output, axis=[2])
     print('residual_maxpooling_output', residual_maxpooling_output)
     return residual_maxpooling_output
 
     # # average_pooling
-    # residual_avepooling_output = tf.reduce_mean(residual_output, axis=[1])
+    # residual_avepooling_output = tf.reduce_mean(residual_output, axis=[2])
     # print('residual_avepooling_output', residual_avepooling_output)
     # return residual_avepooling_output
 
