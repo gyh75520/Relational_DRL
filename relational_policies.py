@@ -95,10 +95,10 @@ def relation_block(self, processed_obs):
     entities = build_entities(processed_obs, self.reduce_obs)
     print('entities:', entities)
     # [B,n_heads,N,Deepth=D+2]
-    MHDPA_output, self.relations = MHDPA(entities, "MHDPA", n_heads=2)
+    MHDPA_output, self.relations = MHDPA(entities, n_heads=2)
     print('MHDPA_output', MHDPA_output)
     # [B,n_heads,N,Deepth]
-    residual_output = residual_block(entities, MHDPA_output, 'residual_block')
+    residual_output = residual_block(entities, MHDPA_output)
     print('residual_output', residual_output)
     # max_pooling [B,n_heads,N,Deepth] --> [B,n_heads,Deepth]
     maxpooling_output = tf.reduce_max(residual_output, axis=2)

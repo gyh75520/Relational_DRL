@@ -110,60 +110,66 @@ def get_coor(input_tensor):
     return coor
 
 
-def getQKV(entities, n_heads):
+def getQKV(entities, n_heads, scope):
     """
     :param entities: (TensorFlow Tensor) The input entities : [B,N,D]
     :param scope: (str) The TensorFlow variable scope
     :param n_heads: (float) The number of attention heads to use
     :return: (TensorFlow Tensor) [B,n_heads,N,D]
     """
-    N = entities.shape[1].value
-    query_size = key_size = value_size = channels = entities.shape[2].value
-    qkv_size = query_size + key_size + value_size
-    # total_size Denoted as F, n_heads Denoted as H
-    total_size = qkv_size * n_heads
-    # [B*N,Deepth]
-    entities = tf.reshape(entities, [-1, channels])
-    # [B*N,F] F = 3*D*n_heads
-    qkv = linear(entities, "QKV", total_size)
-    # [B*N,F]
-    qkv = layerNorm(qkv, "qkv_layerNorm")
-    # # [B,N,F]
-    # qkv = tf.reshape(qkv, [-1, N, total_size])
-    # [B,N,n_heads,3*D]
-    qkv = tf.reshape(qkv, [-1, N, n_heads, qkv_size])
-    # [B,N,n_heads,3*D] -> [B,n_heads,N,3*D]
-    qkv = tf.transpose(qkv, [0, 2, 1, 3])
-    # q = k = v = [B,n_heads,N,D]
-    q, k, v = tf.split(qkv, [key_size, key_size, value_size], -1)
-    return q, k, v
+    with tf.variable_scope(scope):
+        N = entities.shape[1].value
+        query_size = key_size = value_size = channels = entities.shape[2].value
+        qkv_size = query_size + key_size + value_size
+        # total_size Denoted as F, n_heads Denoted as H
+        total_size = qkv_size * n_heads
+        # [B*N,Deepth]
+        entities = tf.reshape(entities, [-1, channels])
+        # [B*N,F] F = 3*D*n_heads
+        qkv = linear(entities, "QKV", total_size)
+        # [B*N,F]
+        qkv = layerNorm(qkv, "qkv_layerNorm")
+        # # [B,N,F]
+        # qkv = tf.reshape(qkv, [-1, N, total_size])
+        # [B,N,n_heads,3*D]
+        qkv = tf.reshape(qkv, [-1, N, n_heads, qkv_size])
+        # [B,N,n_heads,3*D] -> [B,n_heads,N,3*D]
+        qkv = tf.transpose(qkv, [0, 2, 1, 3])
+        # q = k = v = [B,n_heads,N,D]
+        q, k, v = tf.split(qkv, [key_size, key_size, value_size], -1)
+        return q, k, v
 
 
-def MHDPA(entities, scope, n_heads):
+def updateRelations(dot_product, v):
+    """
+    :param entities: (TensorFlow Tensor) dot_product: [B,n_heads,N,N]
+    :return: (TensorFlow Tensor) [B,n_heads,N,D]
+    """
+    relations = tf.nn.softmax(dot_product)
+    # [B,n_heads,N,D]
+    output = tf.matmul(relations, v)
+    # # [B,n_heads,N,D] -> [B,n_heads,N,D]
+    # output = tf.transpose(output, [0, 2, 1, 3])
+    return output, relations
+
+
+def MHDPA(entities,  n_heads):
     """
     An implementation of the Multi-Head Dot-Product Attention architecture in "Relational Deep Reinforcement Learning"
     https://arxiv.org/abs/1806.01830
     ref to the RMC architecture on https://github.com/deepmind/sonnet/blob/master/sonnet/python/modules/relational_memory.py
 
     :param entities: (TensorFlow Tensor) entities [B,N,D]
-    :param scope: (str) The TensorFlow variable scope
     :param n_heads: (float) The number of attention heads to use
     :return: (TensorFlow Tensor) [B,n_heads,N,D]
     """
-    with tf.variable_scope(scope):
-        q, k, v = getQKV(entities, n_heads)
-        query_size = entities.shape[2].value
-        # q *= qkv_size ** -0.5
-        # [B,n_heads,N,N]
-        dot_product = tf.matmul(q, k, transpose_b=True)
-        dot_product = dot_product * (query_size**-0.5)
-        relations = tf.nn.softmax(dot_product)
-        # [B,n_heads,N,D]
-        output = tf.matmul(relations, v)
-        # # [B,n_heads,N,D] -> [B,n_heads,N,D]
-        # output = tf.transpose(output, [0, 2, 1, 3])
-
-        return output, relations
+    q, k, v = getQKV(entities, n_heads, 'QKV')
+    # dot_product *= qkv_size ** -0.5
+    # [B,n_heads,N,N]
+    dot_product = tf.matmul(q, k, transpose_b=True)
+    channels = v.shape[-1].value
+    dot_product = dot_product * (channels**-0.5)
+    return updateRelations(dot_product, v)
 
 
 def residualNet(x, y, scope):
@@ -181,7 +187,7 @@ def residualNet(x, y, scope):
         return output
 
 
-def residual_block(x, y, scope):
+def residual_block(x, y):
     """
     Z = W*y + x
     :param x: (TensorFlow Tensor) entities [B,N,D] N = n_entities
@@ -191,7 +197,7 @@ def residual_block(x, y, scope):
     x_edims = tf.expand_dims(x, axis=1)
     # [B,1,N,D] --> [B,n_heads,N,D]
     x_edims = tf.tile(x_edims, [1,  y.shape[1].value, 1, 1])
-    return residualNet(x_edims, y, scope)
+    return residualNet(x_edims, y, 'residualNet')
 
 
 def reduce_border_extractor(input_tensor):
