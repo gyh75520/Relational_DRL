@@ -98,16 +98,16 @@ def relation_block(self, processed_obs):
     MHDPA_output, self.relations = MHDPA(entities, "MHDPA", n_heads=2)
     print('MHDPA_output', MHDPA_output)
     # [B,n_heads,N,Deepth]
-    residual_output = residual_block(entities, MHDPA_output)
+    residual_output = residual_block(entities, MHDPA_output, 'residual_block')
     print('residual_output', residual_output)
     # max_pooling [B,n_heads,N,Deepth] --> [B,n_heads,Deepth]
     maxpooling_output = tf.reduce_max(residual_output, axis=2)
     print('maxpooling_output', maxpooling_output)
-    # [B,n_heads,Deepth]
-    output = tf.layers.flatten(maxpooling_output)
-    output = layerNorm(output, "relation_layerNorm")
-    print('relation_layerNorm', output)
-    return output
+    # [B,n_heads*Deepth]
+    # output = tf.layers.flatten(maxpooling_output)
+    # output = layerNorm(output, "relation_layerNorm")
+    # print('relation_layerNorm', output)
+    return maxpooling_output
 
     # # average_pooling
     # maxpooling_output = tf.reduce_mean(residual_output, axis=2)

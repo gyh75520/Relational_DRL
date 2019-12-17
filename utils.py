@@ -145,7 +145,7 @@ def MHDPA(entities, scope, n_heads):
     https://arxiv.org/abs/1806.01830
     ref to the RMC architecture on https://github.com/deepmind/sonnet/blob/master/sonnet/python/modules/relational_memory.py
 
-    :param entities: (TensorFlow Tensor) The input tensor from NN [B,N,D]
+    :param entities: (TensorFlow Tensor) entities [B,N,D]
     :param scope: (str) The TensorFlow variable scope
     :param n_heads: (float) The number of attention heads to use
     :return: (TensorFlow Tensor) [B,n_heads,N,D]
@@ -166,22 +166,32 @@ def MHDPA(entities, scope, n_heads):
         return output, relations
 
 
-def residual_block(x, y):
+def residualNet(x, y, scope):
+    """
+    Z = W*y + x
+    :param x: (TensorFlow Tensor) entities [B,n_heads,N,D]
+    :param y: (TensorFlow Tensor) new_entities from MHDPA [B,n_heads,N,D]
+    :return: (TensorFlow Tensor) [B,n_heads,N,D] or [B,N,n_heads,D]
+    """
+    with tf.variable_scope(scope):
+        # W*y
+        output = conv(y, 'y_Matmul_W', n_filters=y.shape[3].value, filter_size=1, stride=1, init_scale=np.sqrt(2))
+        # W*y + x
+        output = tf.add(output, x)
+        return output
+
+
+def residual_block(x, y, scope):
     """
     Z = W*y + x
     :param x: (TensorFlow Tensor) entities [B,N,D] N = n_entities
     :param y: (TensorFlow Tensor) new_entities from MHDPA [B,n_heads,N,D]
     :return: (TensorFlow Tensor) [B,n_heads,N,D]
     """
-    # W*y
-    y_Matmul_W = conv(y, 'y_Matmul_W', n_filters=y.shape[3].value, filter_size=1, stride=1, init_scale=np.sqrt(2))
-    # print('y_Matmul_W', y_Matmul_W)
     x_edims = tf.expand_dims(x, axis=1)
     # [B,1,N,D] --> [B,n_heads,N,D]
     x_edims = tf.tile(x_edims, [1,  y.shape[1].value, 1, 1])
-    # W*y + x
-    residual_output = tf.add(y_Matmul_W, x_edims)
-    return residual_output
+    return residualNet(x_edims, y, scope)
 
 
 def reduce_border_extractor(input_tensor):
