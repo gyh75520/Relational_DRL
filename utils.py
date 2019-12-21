@@ -39,8 +39,8 @@ def simple_cnn(scaled_images, **kwargs):
 
 def concise_cnn(scaled_images, **kwargs):
     """
-    concise CNN, input = [14,14,C].
-
+    input = [H,W,D] H=W
+    output = [H,W,64]
     :param scaled_images: (TensorFlow Tensor) Image input placeholder
     :param kwargs: (dict) Extra keywords parameters for the convolutional layers of the CNN
     :return: (TensorFlow Tensor) The CNN output layer
@@ -48,6 +48,20 @@ def concise_cnn(scaled_images, **kwargs):
     activ = tf.nn.relu
     layer_1 = activ(conv(scaled_images, 'c1', n_filters=32, filter_size=3, stride=1, init_scale=np.sqrt(2), pad='SAME', **kwargs))
     layer_2 = activ(conv(layer_1, 'c2', n_filters=64, filter_size=1, stride=1, init_scale=np.sqrt(2), **kwargs))
+    return layer_2
+
+
+def deepconcise_cnn(scaled_images, **kwargs):
+    """
+    input = [H,W,D] H=W
+    output = [H-3,W-3,64]
+    :param scaled_images: (TensorFlow Tensor) Image input placeholder
+    :param kwargs: (dict) Extra keywords parameters for the convolutional layers of the CNN
+    :return: (TensorFlow Tensor) The CNN output layer
+    """
+    activ = tf.nn.relu
+    layer_1 = activ(conv(scaled_images, 'c1', n_filters=32, filter_size=3, stride=1, init_scale=np.sqrt(2), **kwargs))
+    layer_2 = activ(conv(layer_1, 'c2', n_filters=64, filter_size=2, stride=1, init_scale=np.sqrt(2), **kwargs))
     return layer_2
 
 
@@ -110,6 +124,33 @@ def get_coor(input_tensor):
     return coor
 
 
+def embedding(entities, n_heads, embedding_sizes, scope):
+    """
+    :param entities: (TensorFlow Tensor) The input entities : [B,N,D]
+    :param scope: (str) The TensorFlow variable scope
+    :param n_heads: (float) The number of attention heads to use
+    :return: (TensorFlow Tensor) [B,n_heads,N,embedding_sizes[i]]
+    """
+    with tf.variable_scope(scope):
+        N = entities.shape[1].value
+        channels = entities.shape[2].value
+        # total_size Denoted as F, n_heads Denoted as H
+        total_size = sum(embedding_sizes) * n_heads
+        # [B*N,D]
+        entities = tf.reshape(entities, [-1, channels])
+        # [B*N,F] F = sum(embedding_sizes) * n_heads
+        embedded_embedding = linear(entities, "mlp", total_size)
+        # [B*N,F]
+        qkv = layerNorm(embedded_embedding, "ln")
+        # # [B,N,F]
+        # qkv = tf.reshape(qkv, [-1, N, total_size])
+        # [B,N,n_heads,sum(embedding_sizes)]
+        qkv = tf.reshape(qkv, [-1, N, n_heads, sum(embedding_sizes)])
+        # [B,N,n_heads,sum(embedding_sizes)] -> [B,n_heads,N,sum(embedding_sizes)]
+        qkv = tf.transpose(qkv, [0, 2, 1, 3])
+        return tf.split(qkv, embedding_sizes, -1)
+
+
 def getQKV(entities, n_heads, scope):
     """
     :param entities: (TensorFlow Tensor) The input entities : [B,N,D]
@@ -117,38 +158,20 @@ def getQKV(entities, n_heads, scope):
     :param n_heads: (float) The number of attention heads to use
     :return: (TensorFlow Tensor) [B,n_heads,N,D]
     """
-    with tf.variable_scope(scope):
-        N = entities.shape[1].value
-        query_size = key_size = value_size = channels = entities.shape[2].value
-        qkv_size = query_size + key_size + value_size
-        # total_size Denoted as F, n_heads Denoted as H
-        total_size = qkv_size * n_heads
-        # [B*N,Deepth]
-        entities = tf.reshape(entities, [-1, channels])
-        # [B*N,F] F = 3*D*n_heads
-        qkv = linear(entities, "QKV", total_size)
-        # [B*N,F]
-        qkv = layerNorm(qkv, "qkv_layerNorm")
-        # # [B,N,F]
-        # qkv = tf.reshape(qkv, [-1, N, total_size])
-        # [B,N,n_heads,3*D]
-        qkv = tf.reshape(qkv, [-1, N, n_heads, qkv_size])
-        # [B,N,n_heads,3*D] -> [B,n_heads,N,3*D]
-        qkv = tf.transpose(qkv, [0, 2, 1, 3])
-        # q = k = v = [B,n_heads,N,D]
-        q, k, v = tf.split(qkv, [key_size, key_size, value_size], -1)
-        return q, k, v
+    query_size = key_size = value_size = entities.shape[-1].value
+    return embedding(entities, n_heads, [query_size, key_size, value_size], scope)
 
 
 def updateRelations(dot_product, v):
     """
-    :param entities: (TensorFlow Tensor) dot_product: [B,n_heads,N,N]
+    :param entities: (TensorFlow Tensor) dot_product: [B,n_heads,N1,N2]
     :return: (TensorFlow Tensor) [B,n_heads,N,D]
     """
+    # [B,n_heads,N1,N2]
     relations = tf.nn.softmax(dot_product)
-    # [B,n_heads,N,D]
+    # [B,n_heads,N1,D]
     output = tf.matmul(relations, v)
-    # # [B,n_heads,N,D] -> [B,n_heads,N,D]
+    # # [B,n_heads,N1,D] -> [B,n_heads,N1,D]
     # output = tf.transpose(output, [0, 2, 1, 3])
     return output, relations
 
@@ -200,7 +223,7 @@ def residual_block(x, y):
     return residualNet(x_edims, y, 'residualNet')
 
 
-def reduce_border_extractor(input_tensor):
+def reduce_border_extractor(input_tensor, cnn_extractor):
     """
     reduce boxworld border, and concat indcator
     """
@@ -209,7 +232,7 @@ def reduce_border_extractor(input_tensor):
     # [B,14*gs,14*gs,3] --> [B,12*gs,12*gs,3]
     inter = input_tensor[:, gs:-gs, gs:-gs, :]
     # [B,W,H,D]
-    inter = concise_cnn(inter)
+    inter = cnn_extractor(inter)
     # [B,W*H,D]
     inter_entities = entities_flatten(inter)
     # --- indicator ---
@@ -227,14 +250,15 @@ def reduce_border_extractor(input_tensor):
 
 def build_entities(processed_obs, reduce_obs=False):
     coor = get_coor(processed_obs)
+    cnn_extractor = deepconcise_cnn
     if reduce_obs:
         # [B,Height,W,D+2]
         processed_obs = tf.concat([processed_obs, coor], axis=3)
         # [B,N,D] N=Height*w+1
-        entities = reduce_border_extractor(processed_obs)
+        entities = reduce_border_extractor(processed_obs, cnn_extractor)
     else:
         # [B,Height,W,D]
-        extracted_features = concise_cnn(processed_obs)
+        extracted_features = cnn_extractor(processed_obs)
         # [B,Height,W,D+2]
         entities = tf.concat([extracted_features, coor], axis=3)
         # [B,N,D] N=Height*w
