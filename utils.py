@@ -240,7 +240,7 @@ def embedding(entities, n_heads, embedding_sizes, scope):
         embedded_entities = tf.reshape(embedded_entities, [-1, N, total_size])
         # [B*N,F]
         qkv = layerNorm(embedded_entities, "ln")
-        # qkv = batchNorm(embedded_embedding, "bn")
+        # qkv = batchNorm(embedded_entities, "bn")
         # qkv = instanceNorm(embedded_entities, "instacne_n")
         # # [B,N,F]
         # qkv = tf.reshape(qkv, [-1, N, total_size])
