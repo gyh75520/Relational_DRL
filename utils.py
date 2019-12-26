@@ -81,22 +81,118 @@ def rrl_cnn(scaled_images, **kwargs):
     return layer_2
 
 
+# def layerNorm(input_tensor, scope, eps=1e-5):
+#     """
+#     :param input_tensor: (TensorFlow Tensor) The input tensor  [batch_size,layer_dim]
+#     :param scope: (str) The TensorFlow variable scope
+#     :param eps: (float) A small float number to avoid dividing by 0
+#     :return: (TensorFlow Tensor) layer Normalized optputs with same shape as input_tensor
+#     """
+#     with tf.variable_scope(scope):
+#         hidden_size = input_tensor.shape[-1].value
+#         gamma = tf.get_variable("gamma", [hidden_size], initializer=tf.ones_initializer())
+#         beta = tf.get_variable("beta", [hidden_size], initializer=tf.zeros_initializer())
+#
+#         mean, var = tf.nn.moments(input_tensor, [1], keep_dims=True)
+#         normalized = tf.nn.batch_normalization(input_tensor, mean, var, beta, gamma, eps)
+#         return normalized
+
 def layerNorm(input_tensor, scope, eps=1e-5):
     """
-    Creates a layerNormalization module for TensorFlow
-    ref:https://github.com/deepmind/sonnet/blob/master/sonnet/python/modules/layer_norm.py
-
-    :param input_tensor: (TensorFlow Tensor) The input tensor from NN [batch_size,layer_dim]
+    gamma, beta = [D]
+    mean, var's axis = [2]
+    :param input_tensor: (TensorFlow Tensor) The input tensor [B,N,D]]
     :param scope: (str) The TensorFlow variable scope
     :param eps: (float) A small float number to avoid dividing by 0
     :return: (TensorFlow Tensor) layer Normalized optputs with same shape as input_tensor
     """
     with tf.variable_scope(scope):
-        hidden_size = input_tensor.shape[1].value
-        gamma = tf.get_variable("gamma", [hidden_size], initializer=tf.ones_initializer())
-        beta = tf.get_variable("beta", [hidden_size], initializer=tf.zeros_initializer())
+        hidden_size = input_tensor.shape.as_list()[-1:]
+        gamma = tf.get_variable("gamma", hidden_size, initializer=tf.ones_initializer())
+        beta = tf.get_variable("beta", hidden_size, initializer=tf.zeros_initializer())
+
+        mean, var = tf.nn.moments(input_tensor, [2], keep_dims=True)
+        print('layerNorm_mean', mean.shape)
+        normalized = tf.nn.batch_normalization(input_tensor, mean, var, beta, gamma, eps)
+        return normalized
+
+
+def layerNorm2(input_tensor, scope, eps=1e-5):
+    """
+    gamma, beta = [N,D]
+    mean, var's axis = [1,2]
+    :param input_tensor: (TensorFlow Tensor) The input tensor [B,N,D]]
+    :param scope: (str) The TensorFlow variable scope
+    :param eps: (float) A small float number to avoid dividing by 0
+    :return: (TensorFlow Tensor) layer Normalized optputs with same shape as input_tensor
+    """
+    with tf.variable_scope(scope):
+        hidden_size = input_tensor.shape.as_list()[-2:]
+        gamma = tf.get_variable("gamma", hidden_size, initializer=tf.ones_initializer())
+        beta = tf.get_variable("beta", hidden_size, initializer=tf.zeros_initializer())
+
+        mean, var = tf.nn.moments(input_tensor, [1, 2], keep_dims=True)
+        print('layerNorm2_mean', mean.shape)
+        normalized = tf.nn.batch_normalization(input_tensor, mean, var, beta, gamma, eps)
+        return normalized
+
+
+def layerNorm3(input_tensor, scope, eps=1e-5):
+    """
+    gamma, beta = [D]
+    mean, var's axis = [1,2]
+    :param input_tensor: (TensorFlow Tensor) The input tensor [B,N,D]]
+    :param scope: (str) The TensorFlow variable scope
+    :param eps: (float) A small float number to avoid dividing by 0
+    :return: (TensorFlow Tensor) layer Normalized optputs with same shape as input_tensor
+    """
+    with tf.variable_scope(scope):
+        hidden_size = input_tensor.shape.as_list()[-1:]
+        gamma = tf.get_variable("gamma", hidden_size, initializer=tf.ones_initializer())
+        beta = tf.get_variable("beta", hidden_size, initializer=tf.zeros_initializer())
+
+        mean, var = tf.nn.moments(input_tensor, [1, 2], keep_dims=True)
+        print('layerNorm3_mean', mean.shape)
+        normalized = tf.nn.batch_normalization(input_tensor, mean, var, beta, gamma, eps)
+        return normalized
+
+
+def batchNorm(input_tensor, scope, eps=1e-5):
+    """
+    gamma, beta = [D]
+    mean, var's axis = [0,1]
+    :param input_tensor: (TensorFlow Tensor) The input tensor [B,N,D]
+    :param scope: (str) The TensorFlow variable scope
+    :param eps: (float) A small float number to avoid dividing by 0
+    :return: (TensorFlow Tensor) layer Normalized optputs with same shape as input_tensor
+    """
+    with tf.variable_scope(scope):
+        hidden_size = input_tensor.shape.as_list()[-1:]
+        gamma = tf.get_variable("gamma", hidden_size, initializer=tf.ones_initializer())
+        beta = tf.get_variable("beta", hidden_size, initializer=tf.zeros_initializer())
+
+        mean, var = tf.nn.moments(input_tensor, [0, 1], keep_dims=True)
+        print('batchNorm_mean', mean.shape)
+        normalized = tf.nn.batch_normalization(input_tensor, mean, var, beta, gamma, eps)
+        return normalized
+
+
+def instanceNorm(input_tensor, scope, eps=1e-5):
+    """
+    gamma, beta = [D]
+    mean, var's axis = [1]
+    :param input_tensor: (TensorFlow Tensor) The input tensor [B,N,D]
+    :param scope: (str) The TensorFlow variable scope
+    :param eps: (float) A small float number to avoid dividing by 0
+    :return: (TensorFlow Tensor) layer Normalized optputs with same shape as input_tensor
+    """
+    with tf.variable_scope(scope):
+        hidden_size = input_tensor.shape.as_list()[-1:]
+        gamma = tf.get_variable("gamma", hidden_size, initializer=tf.ones_initializer())
+        beta = tf.get_variable("beta", hidden_size, initializer=tf.zeros_initializer())
 
         mean, var = tf.nn.moments(input_tensor, [1], keep_dims=True)
+        print('instanceNorm_mean', mean.shape)
         normalized = tf.nn.batch_normalization(input_tensor, mean, var, beta, gamma, eps)
         return normalized
 
@@ -139,9 +235,13 @@ def embedding(entities, n_heads, embedding_sizes, scope):
         # [B*N,D]
         entities = tf.reshape(entities, [-1, channels])
         # [B*N,F] F = sum(embedding_sizes) * n_heads
-        embedded_embedding = linear(entities, "mlp", total_size)
+        embedded_entities = linear(entities, "mlp", total_size)
+        # [B*N,F] --> [B,N,F] new
+        embedded_entities = tf.reshape(embedded_entities, [-1, N, total_size])
         # [B*N,F]
-        qkv = layerNorm(embedded_embedding, "ln")
+        qkv = layerNorm(embedded_entities, "ln")
+        # qkv = batchNorm(embedded_embedding, "bn")
+        # qkv = instanceNorm(embedded_entities, "instacne_n")
         # # [B,N,F]
         # qkv = tf.reshape(qkv, [-1, N, total_size])
         # [B,N,n_heads,sum(embedding_sizes)]
