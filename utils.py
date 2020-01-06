@@ -197,6 +197,26 @@ def instanceNorm(input_tensor, scope, eps=1e-5):
         return normalized
 
 
+def FRNorm(input_tensor, scope, eps=1e-6):
+    """
+    gamma, beta = [D]
+    :param input_tensor: (TensorFlow Tensor) The input tensor [B,N,D]
+    :param scope: (str) The TensorFlow variable scope
+    :param eps: (float) A small float number to avoid dividing by 0
+    :return: (TensorFlow Tensor) layer Normalized optputs with same shape as input_tensor
+    """
+    with tf.variable_scope(scope):
+        hidden_size = input_tensor.shape.as_list()[-1:]
+        gamma = tf.get_variable("gamma", hidden_size, initializer=tf.ones_initializer())
+        beta = tf.get_variable("beta", hidden_size, initializer=tf.zeros_initializer())
+        tau = tf.get_variable("tau", hidden_size, initializer=tf.zeros_initializer())
+
+        nu2 = tf.reduce_mean(tf.square(input_tensor), axis=[1], keepdims=True)
+        print('FRNorm_nu2', nu2.shape)
+        normalized = input_tensor * tf.rsqrt(nu2 + tf.abs(eps))
+        return tf.maximum(gamma * normalized + beta, tau)
+
+
 def get_coor(input_tensor):
     """
     The output of cnn is tagged with two extra channels indicating the spatial position(x and y) of each cell
@@ -239,9 +259,10 @@ def embedding(entities, n_heads, embedding_sizes, scope):
         # [B*N,F] --> [B,N,F] new
         embedded_entities = tf.reshape(embedded_entities, [-1, N, total_size])
         # [B*N,F]
-        qkv = layerNorm(embedded_entities, "ln")
+        # qkv = layerNorm(embedded_entities, "ln")
         # qkv = batchNorm(embedded_entities, "bn")
         # qkv = instanceNorm(embedded_entities, "instacne_n")
+        qkv = FRNorm(embedded_entities, 'FRNorm')
         # # [B,N,F]
         # qkv = tf.reshape(qkv, [-1, N, total_size])
         # [B,N,n_heads,sum(embedding_sizes)]
