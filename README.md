@@ -35,7 +35,7 @@ python main.py --help
 ```
 An example:
 ```
-python main.py BoxRandWorld -env_level easy RelationalLstmPolicy
+python main.py BoxRandWorld -env_level easy RelationalPolicy
 ```
 ## Experiment result
 ### BoxRandWorld, level = easy, head = 2
