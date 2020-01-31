@@ -259,10 +259,10 @@ def embedding(entities, n_heads, embedding_sizes, scope):
         # [B*N,F] --> [B,N,F] new
         embedded_entities = tf.reshape(embedded_entities, [-1, N, total_size])
         # [B*N,F]
-        # qkv = layerNorm(embedded_entities, "ln")
+        qkv = layerNorm(embedded_entities, "ln")
         # qkv = batchNorm(embedded_entities, "bn")
         # qkv = instanceNorm(embedded_entities, "instacne_n")
-        qkv = FRNorm(embedded_entities, 'FRNorm')
+        # qkv = FRNorm(embedded_entities, 'FRNorm')
         # # [B,N,F]
         # qkv = tf.reshape(qkv, [-1, N, total_size])
         # [B,N,n_heads,sum(embedding_sizes)]
@@ -378,10 +378,17 @@ def build_entities(processed_obs, reduce_obs=False):
         # [B,N,D] N=Height*w+1
         entities = reduce_border_extractor(processed_obs, cnn_extractor)
     else:
-        # [B,Height,W,D]
-        extracted_features = cnn_extractor(processed_obs)
+        # # [B,Height,W,D]
+        # extracted_features = cnn_extractor(processed_obs)
+        # # [B,Height,W,D+2]
+        # entities = tf.concat([extracted_features, coor], axis=3)
+        # # [B,N,D] N=Height*w
+        # entities = entities_flatten(entities)
+
         # [B,Height,W,D+2]
-        entities = tf.concat([extracted_features, coor], axis=3)
+        processed_obs = tf.concat([processed_obs, coor], axis=3)
+        # [B,Height,W,D]
+        entities = cnn_extractor(processed_obs)
         # [B,N,D] N=Height*w
         entities = entities_flatten(entities)
 
@@ -396,3 +403,24 @@ def entities_flatten(input_tensor):
     """
     _, h, w, channels = input_tensor.shape.as_list()
     return tf.reshape(input_tensor, [-1, h * w, channels])
+
+
+def BoomLayer(input_tensor, scope):
+    """
+    :param input_tensor: (TensorFlow Tensor) entities [B,n_heads,N,D]
+    :return: (TensorFlow Tensor) [B,n_heads,N,D]
+    """
+    with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
+        Batch = tf.shape(input_tensor)[0]
+        _, n_heads, N, channels = input_tensor.shape.as_list()
+        # [B,n_heads,N,D] --> [B*n_heads*N,D]
+        Boom_input = tf.reshape(input_tensor, [Batch * n_heads * N, channels])
+        Boom_output = layerNorm(Boom_input, "ln_boom")
+        # [B*n_heads*N,D] --> [B*n_heads*N,4*D]
+        Boom_output = linear(Boom_output, 'lnear_Boom', channels * 4)
+        Boom_output = tf.reshape(Boom_output, [Batch, n_heads, N, 4, channels])
+        # [B,n_heads,N,4,D] --> [B,n_heads,N,D]
+        Boom_output = tf.reduce_sum(Boom_output, axis=3)
+        print('Boom_output', Boom_output)
+        Boom_output = residualNet(input_tensor, Boom_output, 'Boom_resNet')
+        return Boom_output
